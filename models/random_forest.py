@@ -11,11 +11,13 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorByRandomForest:
-    def __init__(self, antibiotic_name, label_tags='phenotype', scoring='roc_auc'):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc'):
         self._x_tr = None
         self._y_tr = None
         self._x_te = None
         self._y_te = None
+        self._target_base_directory = target_base_directory
+        self._feature_selection = feature_selection
         self._label_tags = label_tags
         self._model = RandomForestClassifier()
         self._best_model = None
@@ -30,7 +32,7 @@ class ARDetectorByRandomForest:
 
     def load_model(self):
         #load the model from disk
-        self._best_model = joblib.load('/home/herkut/Desktop/ar_detector/best_models/' + self._scoring + '_' + self._label_tags + '/random_forest_model_for_' + self._antibiotic_name + '.sav')
+        self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._scoring + '_' + self._label_tags + '/random_forest_model_for_' + self._antibiotic_name + '.sav')
 
     def tune_hyperparameters(self, n_estimators,  max_features, bootstrap=None, max_depth=None):
         param_grid= {'n_estimators': n_estimators, 'max_features': max_features}
@@ -48,10 +50,12 @@ class ARDetectorByRandomForest:
 
         print(grid)
 
-        if not os.path.exists('/home/herkut/Desktop/ar_detector/grid_search_scores/' + self._scoring + '_' + self._label_tags):
-            os.makedirs('/home/herkut/Desktop/ar_detector/grid_search_scores/' + self._scoring + '_' + self._label_tags)
+        target_directory = self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
-        with open('/home/herkut/Desktop/ar_detector/grid_search_scores/' + self._scoring + '_' + self._label_tags + '/random_forest_' + self._antibiotic_name + '.json', 'w') as f:
+        if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + target_directory):
+            os.makedirs(self._target_base_directory + 'grid_search_scores/' + target_directory)
+
+        with open(self._target_base_directory + 'grid_search_scores/' + target_directory + '/random_forest_' + self._antibiotic_name + '.json', 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
@@ -64,11 +68,11 @@ class ARDetectorByRandomForest:
 
         self._best_model = grid.best_estimator_
 
-        if not os.path.exists('/home/herkut/Desktop/ar_detector/best_models/' + self._scoring + '_' + self._label_tags):
-            os.makedirs('/home/herkut/Desktop/ar_detector/best_models/' + self._scoring + '_' + self._label_tags)
+        if not os.path.exists(self._target_base_directory + 'best_models/' + target_directory):
+            os.makedirs(self._target_base_directory + 'best_models/' + target_directory)
 
         # save the model to disk
-        filename = '/home/herkut/Desktop/ar_detector/best_models/' + self._scoring + '_' + self._label_tags + '/random_forest_model_for_' + self._antibiotic_name + '.sav'
+        filename = self._target_base_directory + 'best_models/' + target_directory + '/random_forest_model_for_' + self._antibiotic_name + '.sav'
         joblib.dump(self._best_model, filename)
 
     def predict_ar(self, x):
@@ -83,7 +87,9 @@ class ARDetectorByRandomForest:
         # Plot normalized confusion matrix
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        if not os.path.exists('/home/herkut/Desktop/ar_detector/confusion_matrices/' + self._scoring + '_' + self._label_tags):
-            os.makedirs('/home/herkut/Desktop/ar_detector/confusion_matrices/' + self._scoring + '_' + self._label_tags)
+        target_directory = self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
-        plt.savefig('/home/herkut/Desktop/ar_detector/confusion_matrices/' + self._scoring + '_' + self._label_tags + '/random_forest_' + self._antibiotic_name + '.png')
+        if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + target_directory):
+            os.makedirs(self._target_base_directory + 'confusion_matrices/' + target_directory)
+
+        plt.savefig(self._target_base_directory + 'confusion_matrices/' + target_directory + '/random_forest_' + self._antibiotic_name + '.png')
