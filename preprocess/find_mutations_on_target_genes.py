@@ -268,7 +268,7 @@ class FindMutationsOnTargetGenes:
     def filter_mutations_occurred_only_once():
         removed_mutations = []
         # TODO check whether = asigns address or it copies the original panda frame
-        mutations_without_unique_ones = FindMutationsOnTargetGenes.MUTATIONS
+        mutations_without_unique_ones = FindMutationsOnTargetGenes.MUTATIONS.copy(deep=True)
         for column in FindMutationsOnTargetGenes.MUTATIONS:
             x = mutations_without_unique_ones[column].value_counts()
             if x[1] <= 1:
@@ -280,8 +280,8 @@ class FindMutationsOnTargetGenes:
     def filter_mutations_occurred_only_once_like_baseline():
         removed_mutations = []
         # TODO check whether = asigns address or it copies the original panda frame
-        mutations_without_unique_ones = FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE
-        for column in FindMutationsOnTargetGenes.MUTATIONS:
+        mutations_without_unique_ones = FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE.copy(deep=True)
+        for column in FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE:
             x = mutations_without_unique_ones[column].value_counts()
             if x[1] <= 1 and FindMutationsOnTargetGenes.get_variant_type(column.split('_')[1], column.split('_')[2]) == 'SNP':
                 removed_mutations.append(column)
