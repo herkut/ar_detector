@@ -1,20 +1,22 @@
 from docopt import docopt
 
+from models.ModelManager import ModelManager
+from preprocess.feature_label_preparer import FeatureLabelPreparer
 from preprocess.find_mutations_on_target_genes import FindMutationsOnTargetGenes
 from utils.input_parser import InputParser
 
-"""
- Run the following command to concatenate all files in rerun_pipeline.txt
- cat Desktop/rerun_pipeline.txt | sed ':a;N;$!ba;s/\n/,/g'
-"""
+
+feature_selections = {'1.b': 'feature_matrix_09_without_unique_mutations'
+                        , '1.a': 'feature_matrix_09_with_all_mutations'
+                        , '2.b': 'feature_matrix_like_baseline_without_unique_mutations'
+                        , '2.a': 'feature_matrix_like_baseline_with_all_mutations'}
 
 
 def main():
     args = docopt("""
     Usage: 
         run.py find_mutations <target_base_directory> <target_directory_ids>
-        run.py prepare_features <configuration_file> <target_base_directory>
-        run.py train_models <configuration_file> <target_base_directory>
+        run.py train_models <directory_containing_feature_matrices> <models> <directory_containing_results>
 
     Options:
         -h --help   : show this
@@ -37,6 +39,17 @@ def main():
         mutations_without_unique_ones_like_baseline, mutations_observed_only_ones_like_baseline = FindMutationsOnTargetGenes.filter_mutations_occurred_only_once_like_baseline()
 
         FindMutationsOnTargetGenes.save_all_mutations_including_baseline_approach(FindMutationsOnTargetGenes.MUTATIONS, mutations_without_unique_ones, FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE, mutations_without_unique_ones_like_baseline)
+
+    elif args['train_models']:
+        models = args['<models>']
+        feature_matrices_directory = args['<directory_containing_feature_matrices>']
+        results_directory = args['<directory_containing_results>']
+
+        model_manager = ModelManager(models)
+
+        for k, v in feature_selections.items():
+            features_tr, labels_tr, features_te, labels_te = FeatureLabelPreparer.separate_and_get_features_like_baseline(feature_matrices_directory + v + '.csv')
+            model_manager.train_and_test_models(results_directory, k, features_tr, labels_tr, features_te, labels_te)
 
 
 if __name__ == '__main__':

@@ -77,14 +77,16 @@ class ARDetectorBySVMWithRBF:
         y_pred = self._best_model.predict(self._x_te)
 
         cm = confusion_matrix(self._y_te, y_pred)
-
-        sensitivity = float(cm[0][0]) / np.sum(cm[0])
-        specificity = float(cm[1][1]) / np.sum(cm[1])
-
-        print('For ' + self._antibiotic_name)
-        print(collections.Counter(self._y_te))
-        print('Sensitivity: ' + str(sensitivity))
-        print('Specificity: ' + str(specificity))
+        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2 :
+            sensitivity = float(cm[0][0]) / np.sum(cm[0])
+            specificity = float(cm[1][1]) / np.sum(cm[1])
+            print('For ' + self._antibiotic_name)
+            print(collections.Counter(self._y_te))
+            print('Sensitivity: ' + str(sensitivity))
+            print('Specificity: ' + str(specificity))
+        else:
+            print('For ' + self._antibiotic_name)
+            print('There has been an error in calculating sensitivity and specificity')
 
         # Plot non-normalized confusion matrix
         # plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], title='Confusion matrix, without normalization')
