@@ -5,6 +5,7 @@ import subprocess
 import logging
 import pandas as pd
 import numpy as np
+from preprocess.variants_finder import VariantsFinder
 
 #############################################################################33
 TARGET_GENES_DIRECTORY = '/run/media/herkut/herkut/TB_genomes/target_genes/'
@@ -22,6 +23,7 @@ MUTATIONS_FILE_LIKE_BASELINE_PREFIX = 'feature_matrix_like_baseline_'
 class FindMutationsOnTargetGenes:
     MUTATIONS = None
     MUTATIONS_LIKE_BASELINE = None
+    variant_finder = None
 
     @staticmethod
     def initialize(target_directories):
@@ -30,6 +32,9 @@ class FindMutationsOnTargetGenes:
 
         index = list(map(lambda x: int(x), target_directories))
         FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE = pd.DataFrame(index=index)
+
+        thresholds = [0.9, 0.75, 0.0]
+        FindMutationsOnTargetGenes.variant_finder = VariantsFinder(target_directories, thresholds)
 
     """
         Find variant type, it may be one of the followings: SNP, INDEL
@@ -242,20 +247,7 @@ class FindMutationsOnTargetGenes:
                     output, unused_err = proc.communicate()
                     for line in output.split(os.linesep):
                         if line != '' and line != '[W::bcf_hdr_check_sanity] GL should be declared as Number=G':
-                            mutation_keys = FindMutationsOnTargetGenes.extract_mutation_key(line, tool=file.split('.')[0].split('_')[-1], threshold=0.9)
-
-                            for mutation_key in mutation_keys:
-                                if mutation_key not in FindMutationsOnTargetGenes.MUTATIONS.columns:
-                                    FindMutationsOnTargetGenes.MUTATIONS[mutation_key] = 0
-
-                                FindMutationsOnTargetGenes.MUTATIONS.at[isolate_id, mutation_key] = 1
-
-                            mutations_keys_like_in_baseline = FindMutationsOnTargetGenes.extract_mutation_key_like_in_baseline(line, tool=file.split('.')[0].split('_')[-1], threshold=0.9)
-                            for mutation_key in mutations_keys_like_in_baseline:
-                                if mutation_key not in FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE.columns:
-                                    FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE[mutation_key] = 0
-
-                                FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE.at[isolate_id, mutation_key] = 1
+                            FindMutationsOnTargetGenes.variant_finder.find_variants(isolate_id, line)
 
                     retcode = proc.poll()
                     # subprocess.check_output(command, shell=True)
@@ -289,9 +281,8 @@ class FindMutationsOnTargetGenes:
         return mutations_without_unique_ones, removed_mutations
 
     @staticmethod
-    def save_all_mutations(all_mutations, mutations_without_unique_ones):
-        all_mutations.to_csv(r'' + MUTATIONS_FILE_PREFIX + 'with_all_mutations.csv', index=True, header=True)
-        mutations_without_unique_ones.to_csv(r'' + MUTATIONS_FILE_PREFIX + 'without_unique_mutations.csv', index=True, header=True)
+    def save_all_mutations():
+        FindMutationsOnTargetGenes.variant_finder.save_all_variants_into_file(MUTATIONS_TARGET_DIRECTORY)
 
     @staticmethod
     def save_all_mutations_including_baseline_approach(all_mutations, mutations_without_unique_ones, all_mutations_like_baseline, mutations_without_unique_ones_like_baseline):

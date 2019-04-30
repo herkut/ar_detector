@@ -81,7 +81,7 @@ class ModelManager:
 
         #####################################
         #                                   #
-        #       Deep Neural Network         #
+        #        Deep Neural Network        #
         #                                   #
         #####################################
         if self.enable_dnn:
