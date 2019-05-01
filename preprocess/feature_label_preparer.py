@@ -31,8 +31,6 @@ IGNORE_EMPTY_ROWS = False
 ENABLE_SVM = True
 ENABLE_RF = False
 ENABLE_DNN = False
-
-TRADITIONAL_ML_SCORING = 'f1'
 ######################################################################################
 
 
@@ -147,7 +145,7 @@ class FeatureLabelPreparer:
         return feature_matrix_training, labels_matrix_training, feature_matrix_test, labels_matrix_test
 
     @staticmethod
-    def create_feature_matrix_from_files(feature_files):
+    def get_feature_matrix_from_files(feature_files):
         raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0)
         # print(raw_feature_matrix.shape)
         for i in range(1, len(feature_files)):
@@ -161,12 +159,21 @@ class FeatureLabelPreparer:
                 else:
                     raw_feature_matrix[column] = tmp_feature_matrix[column]
         # print(raw_feature_matrix.shape)
-        return raw_feature_matrix
+        return raw_feature_matrix.values
+
+    @staticmethod
+    def get_labels_from_file(file_containing_labels):
+        labels = pd.read_csv(file_containing_labels, index_col=0)
+        return labels.values
 
 
 def main():
-    tmp_arr = ['/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_all.csv', '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_all.csv', '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
-    xx = FeatureLabelPreparer.create_feature_matrix_from_files(tmp_arr)
+    tmp_arr = ['/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
+    raw_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(tmp_arr)
+    labels = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/labels.csv')
+
+    print('Zaa')
+
 
 
 if __name__ == '__main__':
