@@ -33,7 +33,7 @@ class ModelManager:
     def train_and_test_models(self, results_directory, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[:, i])
-            x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=raw_labels, test_size=0.3)
+            x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.3)
             print("For the antibiotic " + target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
             print("Size of test dataset " + str(np.shape(x_test)))
