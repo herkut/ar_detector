@@ -50,7 +50,6 @@ class ModelManager:
                                                      scoring=TRADITIONAL_ML_SCORING)
                 # train the model
                 self.train_svm_with_rbf(ar_detector,
-                                        i,
                                         x_train,
                                         y_train)
                 # test the model
@@ -60,7 +59,6 @@ class ModelManager:
                                                      label_tags=label_tags,
                                                      scoring=TRADITIONAL_ML_SCORING)
                 self.test_svm_with_rbf(ar_detector,
-                                       i,
                                        x_test,
                                        y_test)
 
@@ -77,7 +75,6 @@ class ModelManager:
                                                        scoring=TRADITIONAL_ML_SCORING)
                 # train the model
                 self.train_random_forest(ar_detector,
-                                         i,
                                          x_train,
                                          y_train)
                 # test the model
@@ -87,7 +84,6 @@ class ModelManager:
                                                        label_tags=label_tags,
                                                        scoring=TRADITIONAL_ML_SCORING)
                 self.test_svm_with_rbf(ar_detector,
-                                       i,
                                        x_test,
                                        y_test)
 
@@ -107,13 +103,13 @@ class ModelManager:
 
         return xx, yy
 
-    def train_svm_with_rbf(self, ar_detector, index_of_antibiotic, feature_matrix_training, labels_matrix_training):
+    def train_svm_with_rbf(self, ar_detector, x_tr, y_tr):
         # conduct svm model
         c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
         # c_range = [1]
         gamma_range = [0.001, 0.1, 1, 10, 100]
         # gamma_range = [1]
-        x_tr, y_tr = self.filter_out_nan(feature_matrix_training, labels_matrix_training[:, index_of_antibiotic])
+        #x_tr, y_tr = self.filter_out_nan(feature_matrix_training, labels_matrix_training[:, index_of_antibiotic])
         #x_te, y_te = self.filter_out_nan(feature_matrix_test, labels_matrix_test[:, index_of_antibiotic])
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
@@ -126,46 +122,46 @@ class ModelManager:
 
         print(ar_detector._best_model)
 
-    def train_random_forest(self, ar_detector, index_of_antibiotic, feature_matrix_training, labels_matrix_training):
+    def train_random_forest(self, ar_detector, x_tr, y_tr):
         # bootstrap = [True, False]
         n_estimators = [int(x) for x in np.linspace(start=100, stop=500, num=100)]
         max_features = ['sqrt', 'log2', None]
 
-        x_tr, y_tr = self.filter_out_nan(feature_matrix_training, labels_matrix_training[:, index_of_antibiotic])
+        #x_tr, y_tr = self.filter_out_nan(feature_matrix_training, labels_matrix_training[:, index_of_antibiotic])
         #x_te, y_te = self.filter_out_nan(feature_matrix_test, labels_matrix_test[:, index_of_antibiotic])
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
         #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_train_datasets(x_tr, y_tr)
+        ar_detector.initialize_train_dataset(x_tr, y_tr)
 
         ar_detector.tune_hyperparameters(n_estimators, max_features)
 
         print(ar_detector._best_model)
 
-    def train_dnn(self, ar_detector, index_of_antibiotic, feature_matrix_training, labels_matrix_training, feature_matrix_test, labels_matrix_test):
+    def train_dnn(self, ar_detector, x_tr, y_tr):
         pass
 
-    def test_svm_with_rbf(self, ar_detector, index_of_antibiotic, feature_matrix_test, labels_matrix_test):
+    def test_svm_with_rbf(self, ar_detector, x_te, y_te):
         #x_tr, y_tr = self.filter_out_nan(feature_matrix_training, labels_matrix_training[:, index_of_antibiotic])
-        x_te, y_te = self.filter_out_nan(feature_matrix_test, labels_matrix_test[:, index_of_antibiotic])
+        #x_te, y_te = self.filter_out_nan(feature_matrix_test, labels_matrix_test[:, index_of_antibiotic])
 
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_test_datasets(x_te, y_te)
+        ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
         ar_detector.test_model()
 
-    def test_random_forest(self, ar_detector, index_of_antibiotic, feature_matrix_test, labels_matrix_test):
+    def test_random_forest(self, ar_detector, x_te, y_te):
         #x_tr, y_tr = self.filter_out_nan(feature_matrix_training, labels_matrix_training[:, index_of_antibiotic])
-        x_te, y_te = self.filter_out_nan(feature_matrix_test, labels_matrix_test[:, index_of_antibiotic])
+        #x_te, y_te = self.filter_out_nan(feature_matrix_test, labels_matrix_test[:, index_of_antibiotic])
 
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_test_datasets(x_te, y_te)
+        ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
         ar_detector.test_model()
 
-    def test_dnn(self, ar_detector, index_of_antibiotic, feature_matrix_training, labels_matrix_training, feature_matrix_test, labels_matrix_test):
+    def test_dnn(self, ar_detector, x_te, y_te):
         pass

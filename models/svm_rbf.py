@@ -27,6 +27,14 @@ class ARDetectorBySVMWithRBF:
         self._antibiotic_name = antibiotic_name
         self._scoring = scoring
 
+    def initialize_train_dataset(self, x_tr, y_tr):
+        self._x_tr = x_tr
+        self._y_tr = y_tr
+
+    def initialize_test_dataset(self, x_te, y_te):
+        self._x_te = x_te
+        self._y_te = y_te
+
     def initialize_datasets(self, x_tr, y_tr, x_te, y_te):
         self._x_tr = x_tr
         self._y_tr = y_tr
