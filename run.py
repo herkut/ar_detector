@@ -1,3 +1,5 @@
+import os
+
 from docopt import docopt
 
 from models.ModelManager import ModelManager
@@ -34,22 +36,24 @@ def main():
         for target_directory in target_directories:
             FindMutationsOnTargetGenes.find_mutations_on_target_genes(target_base_directory + str(target_directory) + '/')
 
-        mutations_without_unique_ones, mutations_observed_only_ones = FindMutationsOnTargetGenes.filter_mutations_occurred_only_once()
-
-        mutations_without_unique_ones_like_baseline, mutations_observed_only_ones_like_baseline = FindMutationsOnTargetGenes.filter_mutations_occurred_only_once_like_baseline()
-
-        FindMutationsOnTargetGenes.save_all_mutations_including_baseline_approach(FindMutationsOnTargetGenes.MUTATIONS, mutations_without_unique_ones, FindMutationsOnTargetGenes.MUTATIONS_LIKE_BASELINE, mutations_without_unique_ones_like_baseline)
+        FindMutationsOnTargetGenes.save_all_mutations()
 
     elif args['train_models']:
         models = args['<models>']
         feature_matrices_directory = args['<directory_containing_feature_matrices>']
         results_directory = args['<directory_containing_results>']
 
-        model_manager = ModelManager(models)
+        feature_matrices_files = []
+        for file in os.listdir('/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/'):
+            feature_matrices_files.append(file)
+            features_tr, labels_tr, features_te, labels_te = FeatureLabelPreparer.separate_and_get_features_like_baseline('/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/' + file)
 
+        """
+        model_manager = ModelManager(models)
         for k, v in feature_selections.items():
             features_tr, labels_tr, features_te, labels_te = FeatureLabelPreparer.separate_and_get_features_like_baseline(feature_matrices_directory + v + '.csv')
             model_manager.train_and_test_models(results_directory, k, features_tr, labels_tr, features_te, labels_te)
+        """
 
 
 if __name__ == '__main__':

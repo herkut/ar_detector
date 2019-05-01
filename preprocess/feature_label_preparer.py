@@ -146,9 +146,27 @@ class FeatureLabelPreparer:
 
         return feature_matrix_training, labels_matrix_training, feature_matrix_test, labels_matrix_test
 
+    @staticmethod
+    def create_feature_matrix_from_files(feature_files):
+        raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0)
+        # print(raw_feature_matrix.shape)
+        for i in range(1, len(feature_files)):
+            tmp_feature_matrix = pd.read_csv(feature_files[i], index_col=0)
+            # print(tmp_feature_matrix.shape)
+            for column in tmp_feature_matrix.columns:
+                if column in raw_feature_matrix.columns:
+                    for i in raw_feature_matrix.index:
+                        if raw_feature_matrix.at[i, column] == 0 and tmp_feature_matrix.at[i, column] == 1:
+                            raw_feature_matrix.at[i, column] = 1
+                else:
+                    raw_feature_matrix[column] = tmp_feature_matrix[column]
+        # print(raw_feature_matrix.shape)
+        return raw_feature_matrix
+
 
 def main():
-    pass
+    tmp_arr = ['/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_all.csv', '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_all.csv', '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
+    xx = FeatureLabelPreparer.create_feature_matrix_from_files(tmp_arr)
 
 
 if __name__ == '__main__':
