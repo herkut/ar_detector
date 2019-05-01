@@ -51,6 +51,7 @@ def main():
 
         model_manager = ModelManager(models)
         for k, v in feature_selections.items():
+            print("Models would be trained and tested for feature selection method: " + k)
             raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
             raw_label_matrix = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/labels.csv')
             model_manager.train_and_test_models(results_directory, k, raw_feature_matrix, raw_label_matrix)
