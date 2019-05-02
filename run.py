@@ -7,13 +7,6 @@ from preprocess.feature_label_preparer import FeatureLabelPreparer
 from preprocess.find_mutations_on_target_genes import FindMutationsOnTargetGenes
 from utils.input_parser import InputParser
 
-"""
-feature_selections = {'1.b': 'feature_matrix_09_without_unique_mutations'
-                        , '1.a': 'feature_matrix_09_with_all_mutations'
-                        , '2.b': 'feature_matrix_like_baseline_without_unique_mutations'
-                        , '2.a': 'feature_matrix_like_baseline_with_all_mutations'}
-"""
-
 
 def main():
     args = docopt("""
@@ -46,7 +39,8 @@ def main():
         feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv'],
                               'snp_09_bcf_nu_indel_09_bcf_all': ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_bcftools_0.0_all.csv'],
                               'snp_09_playpus_nu_indel_00_platypus_all': ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv'],
-                              'snp_09_playpus_nu_indel_00_bcf_all': ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_bcftools_0.0_all.csv']
+                              'snp_09_playpus_nu_indel_00_bcf_all': ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_bcftools_0.0_all.csv'],
+                              'snp_09_bcf_platypus_nu_indel_00_bcf_platypus_all': ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_bcftools_0.0_all.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
                               }
 
         model_manager = ModelManager(models)
