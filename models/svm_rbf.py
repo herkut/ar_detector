@@ -55,7 +55,7 @@ class ARDetectorBySVMWithRBF:
 
         print(grid)
 
-        target_directory = self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+        target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
         if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + target_directory):
             os.makedirs(self._target_base_directory + 'grid_search_scores/' + target_directory)
@@ -102,7 +102,7 @@ class ARDetectorBySVMWithRBF:
         # Plot normalized confusion matrix
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        target_directory = self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+        target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
         if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + target_directory):
             os.makedirs(self._target_base_directory + 'confusion_matrices/' + target_directory)

@@ -43,7 +43,7 @@ class ARDetectorByRandomForest:
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._scoring + '_' + self._label_tags + '/random_forest_model_for_' + self._antibiotic_name + '.sav')
 
     def tune_hyperparameters(self, n_estimators,  max_features, bootstrap=None, max_depth=None):
-        param_grid= {'n_estimators': n_estimators, 'max_features': max_features}
+        param_grid = {'n_estimators': n_estimators, 'max_features': max_features}
 
         if bootstrap is not None:
             param_grid['bootstrap'] = bootstrap
@@ -58,7 +58,7 @@ class ARDetectorByRandomForest:
 
         print(grid)
 
-        target_directory = self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+        target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
         if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + target_directory):
             os.makedirs(self._target_base_directory + 'grid_search_scores/' + target_directory)
@@ -95,7 +95,7 @@ class ARDetectorByRandomForest:
         # Plot normalized confusion matrix
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        target_directory = self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+        target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
         if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + target_directory):
             os.makedirs(self._target_base_directory + 'confusion_matrices/' + target_directory)
