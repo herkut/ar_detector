@@ -1,8 +1,9 @@
 import collections
 import json
+import multiprocessing
 import os
 
-from keras import Sequential
+from keras import Sequential, callbacks
 from keras.engine.saving import model_from_json
 from keras.layers import Dense, BatchNormalization, Dropout
 from keras.wrappers.scikit_learn import KerasClassifier
@@ -32,6 +33,7 @@ class ArDetectorByDNN:
         self._metrics = metrics
 
         self._best_model = None
+        self._best_model_q = multiprocessing.Queue()
 
     def create_model(self, batch_normalization_required=False, optimizer='adam', dropout_rate=0.0):
         model = Sequential()
@@ -70,10 +72,16 @@ class ArDetectorByDNN:
     def tune_hyperparameters(self, param_grid):
         model = KerasClassifier(build_fn=self.create_model, verbose=1)
 
+        es = callbacks.EarlyStopping(monitor='loss',
+                                     min_delta=0,
+                                     patience=2,
+                                     verbose=0,
+                                     mode='auto')
+
         grid = GridSearchCV(estimator=model,
                             param_grid=param_grid)
 
-        grid_result = grid.fit(self._x_tr, self._y_tr)
+        grid_result = grid.fit(self._x_tr, self._y_tr, callbacks=[es])
 
         print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
         means = grid_result.cv_results_['mean_test_score']
@@ -110,7 +118,7 @@ class ArDetectorByDNN:
 
         # save the models into file
         model_json = model.to_json()
-        with open(self._results_directory + 'best_models/' + target_directory + '/model.json', "w") as json_file:
+        with open(self._results_directory + 'best_models/' + target_directory + '/model_' + self._antibiotic_name + '.json', "w") as json_file:
             json_file.write(model_json)
         # save network weights
         model.save_weights(self._results_directory + 'best_models/' + target_directory + "/dnn_for_" + self._antibiotic_name + '.h5')

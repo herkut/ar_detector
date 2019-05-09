@@ -7,7 +7,8 @@ from models.svm_rbf import ARDetectorBySVMWithRBF
 
 
 ######################################################################
-target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin']
+#target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin']
+target_drugs = ['Streptomycin', 'Ofloxacin', 'Amikacin']
 label_tags = 'phenotype'
 TRADITIONAL_ML_SCORING = 'accuracy'
 TEST_SIZE = 0.3
@@ -149,11 +150,12 @@ class ModelManager:
         print(ar_detector._best_model)
 
     def train_dnn(self, ar_detector, x_tr, y_tr):
-        param_grid = dict(epochs=[50, 100, 150, 200, 500],
-                          batch_size=[1, 25, 50, 75, 100],
-                          optimizer=['SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adam', 'Adamax', 'Nadam'],
-                          dropout_rate=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-                          batch_normalization_required=[False, True])
+        # Optimizers to be tried are selected according to Karpathy's following blog page: https://medium.com/@karpathy/a-peek-at-trends-in-machine-learning-ab8a1085a106
+        param_grid = dict(epochs=[50],
+                          batch_size=[1, 50, 100],
+                          optimizer=['RMSprop', 'Adam', 'Adagrad', 'Adadelta'],
+                          dropout_rate=[0.0, 0.5, 0.9],
+                          batch_normalization_required=[True])
         """
         param_grid = dict(epochs=[50, 100],
                           batch_size=[100],
