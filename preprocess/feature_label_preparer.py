@@ -1,9 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.externals import joblib
 
-from models.random_forest import ARDetectorByRandomForest
-from models.svm_rbf import ARDetectorBySVMWithRBF
 
 ######################################################################################
 BASE_DIRECTORY='/run/media/herkut/herkut/TB_genomes/'
@@ -11,11 +8,6 @@ BASE_DIRECTORY='/run/media/herkut/herkut/TB_genomes/'
 FEATURE_MATRIX_DIRECTORY = BASE_DIRECTORY + 'ar_detection_dataset/'
 
 FEATURE_MATRIX_FILE_PREFIX = 'feature_matrix_'
-#FEATURE_SELECTION = '09_without_unique_mutations'
-#FEATURE_SELECTION = '09_with_all_mutations'
-#FEATURE_SELECTION = 'like_baseline_without_unique_mutations'
-#FEATURE_SELECTION = 'like_baseline_with_all_mutations'
-#FEATURE_MATRIX_FILE = FEATURE_MATRIX_FILE_PREFIX + FEATURE_SELECTION + '.csv'
 
 LABELS_DIRECTORY = BASE_DIRECTORY + 'ar_detection_dataset/'
 LABELS_FILE = 'labels.csv'
@@ -173,7 +165,6 @@ def main():
     labels = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/labels.csv')
 
     print('Zaa')
-
 
 
 if __name__ == '__main__':
