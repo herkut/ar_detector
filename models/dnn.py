@@ -1,8 +1,8 @@
 import collections
 import json
-import multiprocessing
 import os
 
+from keras import backend as K
 from keras import Sequential, callbacks
 from keras.engine.saving import model_from_json
 from keras.layers import Dense, BatchNormalization, Dropout
@@ -33,7 +33,7 @@ class ArDetectorByDNN:
         self._metrics = metrics
 
         self._best_model = None
-        self._best_model_q = multiprocessing.Queue()
+        self._target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
 
     def create_model(self, batch_normalization_required=False, optimizer='adam', dropout_rate=0.0):
         model = Sequential()
@@ -90,17 +90,13 @@ class ArDetectorByDNN:
         for mean, stdev, param in zip(means, stds, params):
             print("%f (%f) with: %r" % (mean, stdev, param))
 
-        target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
+        if not os.path.exists(self._results_directory + 'best_models/' + self._target_directory):
+            os.makedirs(self._results_directory + 'best_models/' + self._target_directory)
 
-        if not os.path.exists(self._results_directory + 'best_models/' + target_directory):
-            os.makedirs(self._results_directory + 'best_models/' + target_directory)
+        if not os.path.exists(self._results_directory + 'grid_search_scores/' + self._target_directory):
+            os.makedirs(self._results_directory + 'grid_search_scores/' + self._target_directory)
 
-        target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
-
-        if not os.path.exists(self._results_directory + 'grid_search_scores/' + target_directory):
-            os.makedirs(self._results_directory + 'grid_search_scores/' + target_directory)
-
-        with open(self._results_directory + 'grid_search_scores/' + target_directory + '/dnn_' + self._antibiotic_name + '.json', 'w') as f:
+        with open(self._results_directory + 'grid_search_scores/' + self._target_directory + '/dnn_' + self._antibiotic_name + '.json', 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         print(grid_result.best_score_)
@@ -110,28 +106,27 @@ class ArDetectorByDNN:
 
         self.save_model(grid.best_estimator_.model)
 
-    def save_model(self, model):
-        target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
+        if K.backend() == 'tensorflow':
+            K.clear_session()
 
-        if not os.path.exists(self._results_directory + 'best_models/' + target_directory):
-            os.makedirs(self._results_directory + 'best_models/' + target_directory)
+    def save_model(self, model):
+        if not os.path.exists(self._results_directory + 'best_models/' + self._target_directory):
+            os.makedirs(self._results_directory + 'best_models/' + self._target_directory)
 
         # save the models into file
         model_json = model.to_json()
-        with open(self._results_directory + 'best_models/' + target_directory + '/model_' + self._antibiotic_name + '.json', "w") as json_file:
+        with open(self._results_directory + 'best_models/' + self._target_directory + '/model_' + self._antibiotic_name + '.json', "w") as json_file:
             json_file.write(model_json)
         # save network weights
-        model.save_weights(self._results_directory + 'best_models/' + target_directory + "/dnn_for_" + self._antibiotic_name + '.h5')
+        model.save_weights(self._results_directory + 'best_models/' + self._target_directory + "/dnn_for_" + self._antibiotic_name + '.h5')
 
     def load_model(self):
-        target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
-
         # Model reconstruction from JSON file
-        with open(self._results_directory + 'best_models/' + target_directory + '/model.json', 'r') as f:
+        with open(self._results_directory + 'best_models/' + self._target_directory + '/model_' + self._antibiotic_name + '.json', 'r') as f:
             self._best_model = model_from_json(f.read())
 
         # Load weights into the new model
-        self._best_model.load_weights(self._results_directory + 'best_models/' + target_directory + "/dnn_for_" + self._antibiotic_name + '.h5')
+        self._best_model.load_weights(self._results_directory + 'best_models/' + self._target_directory + "/dnn_for_" + self._antibiotic_name + '.h5')
 
     def test_model(self):
         y_pred = self._best_model.predict(self._x_te)
@@ -157,13 +152,14 @@ class ArDetectorByDNN:
         # Plot normalized confusion matrix
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
+        if not os.path.exists(self._results_directory + 'confusion_matrices/' + self._target_directory):
+            os.makedirs(self._results_directory + 'confusion_matrices/' + self._target_directory)
 
-        if not os.path.exists(self._results_directory + 'confusion_matrices/' + target_directory):
-            os.makedirs(self._results_directory + 'confusion_matrices/' + target_directory)
-
-        plt.savefig(self._results_directory + 'confusion_matrices/' + target_directory + '/normalized_dnn_' + self._antibiotic_name + '.png')
+        plt.savefig(self._results_directory + 'confusion_matrices/' + self._target_directory + '/normalized_dnn_' + self._antibiotic_name + '.png')
 
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
-        plt.savefig(self._results_directory + 'confusion_matrices/' + target_directory + '/dnn_' + self._antibiotic_name + '.png')
+        plt.savefig(self._results_directory + 'confusion_matrices/' + self._target_directory + '/dnn_' + self._antibiotic_name + '.png')
+
+        if K.backend() == 'tensorflow':
+            K.clear_session()
