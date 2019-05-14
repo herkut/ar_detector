@@ -7,10 +7,9 @@ from models.svm_rbf import ARDetectorBySVMWithRBF
 
 
 ######################################################################
-#target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin']
-target_drugs = ['Streptomycin', 'Ofloxacin', 'Amikacin']
+target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin']
 label_tags = 'phenotype'
-TRADITIONAL_ML_SCORING = 'accuracy'
+TRADITIONAL_ML_SCORING = 'f1'
 TEST_SIZE = 0.3
 ######################################################################
 
@@ -19,19 +18,17 @@ class ModelManager:
     def __init__(self, models):
         # Set which models would be trained
         models_arr = models.split(',')
+        self.enable_svm = False
+        self.enable_rf = False
+        self.enable_dnn = False
+
         for model in models_arr:
             if model == 'svm':
                 self.enable_svm = True
-            else:
-                self.enable_svm = False
             if model == 'rf':
                 self.enable_rf = True
-            else:
-                self.enable_rf = False
             if model == 'dnn':
                 self.enable_dnn = True
-            else:
-                self.enable_dnn = False
 
     def train_and_test_models(self, results_directory, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(target_drugs)):
@@ -136,7 +133,7 @@ class ModelManager:
 
     def train_random_forest(self, ar_detector, x_tr, y_tr):
         # bootstrap = [True, False]
-        n_estimators = [int(x) for x in np.linspace(start=100, stop=500, num=100)]
+        n_estimators = [100, 250, 500]
         max_features = ['sqrt', 'log2', None]
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
@@ -187,5 +184,5 @@ class ModelManager:
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.initialize_test_dataset(x_te, y_te)
-        # ar_detector.load_model()
+        ar_detector.load_model()
         ar_detector.test_model()

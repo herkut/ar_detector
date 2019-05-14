@@ -23,6 +23,7 @@ class ARDetectorByRandomForest:
         self._best_model = None
         self._antibiotic_name = antibiotic_name
         self._scoring = scoring
+        self._target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
     def initialize_train_dataset(self, x_tr, y_tr):
         self._x_tr = x_tr
@@ -39,8 +40,7 @@ class ARDetectorByRandomForest:
         self._y_te = y_te
 
     def load_model(self):
-        #load the model from disk
-        self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._scoring + '_' + self._label_tags + '/random_forest_model_for_' + self._antibiotic_name + '.sav')
+        self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/random_forest_model_for_' + self._antibiotic_name + '.sav')
 
     def tune_hyperparameters(self, n_estimators,  max_features, bootstrap=None, max_depth=None):
         param_grid = {'n_estimators': n_estimators, 'max_features': max_features}
@@ -58,12 +58,10 @@ class ARDetectorByRandomForest:
 
         print(grid)
 
-        target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+        if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'grid_search_scores/' + self._target_directory)
 
-        if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + target_directory):
-            os.makedirs(self._target_base_directory + 'grid_search_scores/' + target_directory)
-
-        with open(self._target_base_directory + 'grid_search_scores/' + target_directory + '/random_forest_' + self._antibiotic_name + '.json', 'w') as f:
+        with open(self._target_base_directory + 'grid_search_scores/' + self._target_directory + '/random_forest_' + self._antibiotic_name + '.json', 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
@@ -76,11 +74,11 @@ class ARDetectorByRandomForest:
 
         self._best_model = grid.best_estimator_
 
-        if not os.path.exists(self._target_base_directory + 'best_models/' + target_directory):
-            os.makedirs(self._target_base_directory + 'best_models/' + target_directory)
+        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
 
         # save the model to disk
-        filename = self._target_base_directory + 'best_models/' + target_directory + '/random_forest_model_for_' + self._antibiotic_name + '.sav'
+        filename = self._target_base_directory + 'best_models/' + self._target_directory + '/random_forest_model_for_' + self._antibiotic_name + '.sav'
         joblib.dump(self._best_model, filename)
 
     def predict_ar(self, x):
@@ -89,15 +87,12 @@ class ARDetectorByRandomForest:
     def test_model(self):
         y_pred = self._best_model.predict(self._x_te)
 
-        # Plot non-normalized confusion matrix
-        # plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], title='Confusion matrix, without normalization')
-
-        # Plot normalized confusion matrix
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+        if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'confusion_matrices/' + self._target_directory)
 
-        if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + target_directory):
-            os.makedirs(self._target_base_directory + 'confusion_matrices/' + target_directory)
+        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/normalized_random_forest_' + self._antibiotic_name + '.png')
 
-        plt.savefig(self._target_base_directory + 'confusion_matrices/' + target_directory + '/random_forest_' + self._antibiotic_name + '.png')
+        plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
+        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/random_forest_' + self._antibiotic_name + '.png')
