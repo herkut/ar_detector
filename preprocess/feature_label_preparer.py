@@ -145,7 +145,7 @@ class FeatureLabelPreparer:
         return feature_matrix_training, labels_matrix_training, feature_matrix_test, labels_matrix_test
 
     @staticmethod
-    def get_feature_matrix_from_files(feature_files):
+    def get_feature_matrix_from_files(feature_files, use_tfidf=False):
         raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0)
         # print(raw_feature_matrix.shape)
         for i in range(1, len(feature_files)):
@@ -158,8 +158,23 @@ class FeatureLabelPreparer:
                             raw_feature_matrix.at[i, column] = 1
                 else:
                     raw_feature_matrix[column] = tmp_feature_matrix[column]
+        # Convert feature matrix into a form containing tf-idf values instead of binary value
+        if use_tfidf:
+            raw_feature_matrix = FeatureLabelPreparer.update_feature_matrix_with_tf_idf(raw_feature_matrix)
         # print(raw_feature_matrix.shape)
         return raw_feature_matrix.values
+
+    @staticmethod
+    def update_feature_matrix_with_tf_idf(feature_matrix):
+        # Compute term frequencies
+        tf = feature_matrix.divide((1 + np.sum(feature_matrix, axis=1)), axis=0)
+
+        # Compute inverse document frequencies
+        idf = np.log(len(tf) / feature_matrix[feature_matrix > 0].count())
+
+        tfidf = np.multiply(tf, idf.to_frame().T)
+
+        return tfidf
 
     @staticmethod
     def get_labels_from_file(file_containing_labels):
@@ -168,12 +183,11 @@ class FeatureLabelPreparer:
 
 
 def main():
-    tmp_arr = ['/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
-    raw_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(tmp_arr)
-    labels = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/labels.csv')
+    tmp_arr = ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
+    raw_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(tmp_arr, use_tfidf=True)
+    labels = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/labels.csv')
 
     print('Zaa')
-
 
 
 if __name__ == '__main__':
