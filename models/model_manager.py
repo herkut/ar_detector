@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from models.dnn import ArDetectorByDNN
+from models.logistic_regression import ARDetectorByLogisticRegresion
 from models.random_forest import ARDetectorByRandomForest
 from models.svm_rbf import ARDetectorBySVMWithRBF
 
@@ -21,6 +22,7 @@ class ModelManager:
         self.enable_svm = False
         self.enable_rf = False
         self.enable_dnn = False
+        self.enable_lr = False
 
         for model in models_arr:
             if model == 'svm':
@@ -29,6 +31,8 @@ class ModelManager:
                 self.enable_rf = True
             if model == 'dnn':
                 self.enable_dnn = True
+            if model == 'lr':
+                self.enable_lr = True
 
     def train_and_test_models(self, results_directory, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(target_drugs)):
@@ -83,9 +87,9 @@ class ModelManager:
                                                        target_drugs[i],
                                                        label_tags=label_tags,
                                                        scoring=TRADITIONAL_ML_SCORING)
-                self.test_svm_with_rbf(ar_detector,
-                                       x_test,
-                                       y_test)
+                self.test_random_forest(ar_detector,
+                                        x_test,
+                                        y_test)
 
             #####################################
             #                                   #
@@ -105,6 +109,27 @@ class ModelManager:
                 self.train_dnn(ar_detector, x_train, y_train)
 
                 self.test_dnn(ar_detector, x_test, y_test)
+
+            if self.enable_lr:
+                ar_detector = ARDetectorByLogisticRegresion(results_directory,
+                                                       feature_selection,
+                                                       target_drugs[i],
+                                                       label_tags=label_tags,
+                                                       scoring=TRADITIONAL_ML_SCORING)
+                # train the model
+                self.train_logistic_regression(ar_detector,
+                                               x_train,
+                                               y_train)
+                # test the model
+                ar_detector = ARDetectorByLogisticRegresion(results_directory,
+                                                       feature_selection,
+                                                       target_drugs[i],
+                                                       label_tags=label_tags,
+                                                       scoring=TRADITIONAL_ML_SCORING)
+                self.test_logistic_regression(ar_detector,
+                                              x_test,
+                                              y_test)
+
 
     def filter_out_nan(self, x, y):
         index_to_remove = np.argwhere(np.isnan(y))
