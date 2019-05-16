@@ -130,7 +130,6 @@ class ModelManager:
                                               x_test,
                                               y_test)
 
-
     def filter_out_nan(self, x, y):
         index_to_remove = np.argwhere(np.isnan(y))
 
@@ -170,6 +169,25 @@ class ModelManager:
 
         if max_depth is not None:
             param_grid['max_depth'] = max_depth
+
+        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
+        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
+        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
+
+        ar_detector.initialize_train_dataset(x_tr, y_tr)
+
+        ar_detector.tune_hyperparameters(param_grid)
+
+        print(ar_detector._best_model)
+
+    def train_logistic_regression(self, ar_detector, x_tr, y_tr):
+        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
+        penalty = [None, 'elasticnet', 'l1', 'l2']
+        solver = ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+
+        param_grid = {'C': c_range,
+                      'penalty': penalty,
+                      'solver': solver}
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
@@ -222,24 +240,9 @@ class ModelManager:
         ar_detector.load_model()
         ar_detector.test_model()
 
-    def train_logistic_regression(self, ar_detector, x_tr, y_tr):
-        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
-        penalty = [None, 'elasticnet', 'l1', 'l2']
-        solver = ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+    def test_logistic_regression(self, ar_detector, x_te, y_te):
+        print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        param_grid = {'C': c_range,
-                      'penalty': penalty,
-                      'solver': solver}
-
-        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
-        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
-
-        ar_detector.initialize_train_dataset(x_tr, y_tr)
-
-        ar_detector.tune_hyperparameters(param_grid)
-
-        print(ar_detector._best_model)
-
-    def test_logistic_regression(self, ar_detector, x_test, y_test):
-        pass
+        ar_detector.initialize_test_dataset(x_te, y_te)
+        ar_detector.load_model()
+        ar_detector.test_model()
