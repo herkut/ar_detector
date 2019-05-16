@@ -42,15 +42,7 @@ class ARDetectorByRandomForest:
     def load_model(self):
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/random_forest_model_for_' + self._antibiotic_name + '.sav')
 
-    def tune_hyperparameters(self, n_estimators,  max_features, bootstrap=None, max_depth=None):
-        param_grid = {'n_estimators': n_estimators, 'max_features': max_features}
-
-        if bootstrap is not None:
-            param_grid['bootstrap'] = bootstrap
-
-        if max_depth is not None:
-            param_grid['max_depth'] = max_depth
-
+    def tune_hyperparameters(self, param_grid):
         model = self._model
 
         grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=-1)

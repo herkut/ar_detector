@@ -46,8 +46,7 @@ class ARDetectorBySVMWithRBF:
         #load the model from disk
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_model_for_' + self._antibiotic_name + '.sav')
 
-    def tune_hyperparameters(self, c, gamma):
-        param_grid = {'C': c, 'gamma': gamma}
+    def tune_hyperparameters(self, param_grid):
         model = self._model
 
         grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=-1)
@@ -94,10 +93,6 @@ class ARDetectorBySVMWithRBF:
             print('For ' + self._antibiotic_name)
             print('There has been an error in calculating sensitivity and specificity')
 
-        # Plot non-normalized confusion matrix
-        # plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], title='Confusion matrix, without normalization')
-
-        # Plot normalized confusion matrix
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
         if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):

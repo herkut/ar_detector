@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from models.dnn import ArDetectorByDNN
-from models.logistic_regression import ARDetectorByLogisticRegresion
+from models.logistic_regression import ARDetectorByLogisticRegression
 from models.random_forest import ARDetectorByRandomForest
 from models.svm_rbf import ARDetectorBySVMWithRBF
 
@@ -111,21 +111,21 @@ class ModelManager:
                 self.test_dnn(ar_detector, x_test, y_test)
 
             if self.enable_lr:
-                ar_detector = ARDetectorByLogisticRegresion(results_directory,
-                                                       feature_selection,
-                                                       target_drugs[i],
-                                                       label_tags=label_tags,
-                                                       scoring=TRADITIONAL_ML_SCORING)
+                ar_detector = ARDetectorByLogisticRegression(results_directory,
+                                                             feature_selection,
+                                                             target_drugs[i],
+                                                             label_tags=label_tags,
+                                                             scoring=TRADITIONAL_ML_SCORING)
                 # train the model
                 self.train_logistic_regression(ar_detector,
                                                x_train,
                                                y_train)
                 # test the model
-                ar_detector = ARDetectorByLogisticRegresion(results_directory,
-                                                       feature_selection,
-                                                       target_drugs[i],
-                                                       label_tags=label_tags,
-                                                       scoring=TRADITIONAL_ML_SCORING)
+                ar_detector = ARDetectorByLogisticRegression(results_directory,
+                                                             feature_selection,
+                                                             target_drugs[i],
+                                                             label_tags=label_tags,
+                                                             scoring=TRADITIONAL_ML_SCORING)
                 self.test_logistic_regression(ar_detector,
                                               x_test,
                                               y_test)
@@ -142,9 +142,9 @@ class ModelManager:
     def train_svm_with_rbf(self, ar_detector, x_tr, y_tr):
         # conduct svm model
         c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
-        # c_range = [1]
         gamma_range = [0.001, 0.1, 1, 10, 100]
-        # gamma_range = [1]
+
+        param_grid = {'C': c_range, 'gamma': gamma_range}
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
@@ -152,7 +152,7 @@ class ModelManager:
 
         ar_detector.initialize_train_dataset(x_tr, y_tr)
 
-        ar_detector.tune_hyperparameters(c_range, gamma_range)
+        ar_detector.tune_hyperparameters(param_grid)
 
         print(ar_detector._best_model)
 
@@ -160,6 +160,16 @@ class ModelManager:
         # bootstrap = [True, False]
         n_estimators = [100, 250, 500, 1000]
         max_features = ['sqrt', 'log2', None]
+        bootstrap = None
+        max_depth = None
+
+        param_grid = {'n_estimators': n_estimators, 'max_features': max_features}
+
+        if bootstrap is not None:
+            param_grid['bootstrap'] = bootstrap
+
+        if max_depth is not None:
+            param_grid['max_depth'] = max_depth
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
@@ -167,7 +177,7 @@ class ModelManager:
 
         ar_detector.initialize_train_dataset(x_tr, y_tr)
 
-        ar_detector.tune_hyperparameters(n_estimators, max_features)
+        ar_detector.tune_hyperparameters(param_grid)
 
         print(ar_detector._best_model)
 
@@ -211,3 +221,25 @@ class ModelManager:
         ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
         ar_detector.test_model()
+
+    def train_logistic_regression(self, ar_detector, x_tr, y_tr):
+        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
+        penalty = [None, 'elasticnet', 'l1', 'l2']
+        solver = ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+
+        param_grid = {'C': c_range,
+                      'penalty': penalty,
+                      'solver': solver}
+
+        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
+        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
+        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
+
+        ar_detector.initialize_train_dataset(x_tr, y_tr)
+
+        ar_detector.tune_hyperparameters(param_grid)
+
+        print(ar_detector._best_model)
+
+    def test_logistic_regression(self, ar_detector, x_test, y_test):
+        pass
