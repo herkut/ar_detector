@@ -4,7 +4,7 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 from utils.confusion_matrix_drawer import plot_confusion_matrix
 from utils.numpy_encoder import NumpyEncoder

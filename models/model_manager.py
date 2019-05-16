@@ -133,7 +133,7 @@ class ModelManager:
 
     def train_random_forest(self, ar_detector, x_tr, y_tr):
         # bootstrap = [True, False]
-        n_estimators = [100, 250, 500]
+        n_estimators = [100, 250, 500, 1000]
         max_features = ['sqrt', 'log2', None]
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
