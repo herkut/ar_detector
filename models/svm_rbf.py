@@ -43,7 +43,6 @@ class ARDetectorBySVMWithRBF:
         self._y_te = y_te
 
     def load_model(self):
-        #load the model from disk
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_model_for_' + self._antibiotic_name + '.sav')
 
     def tune_hyperparameters(self, param_grid):
