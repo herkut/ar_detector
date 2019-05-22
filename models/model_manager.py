@@ -182,7 +182,8 @@ class ModelManager:
 
     def train_logistic_regression(self, ar_detector, x_tr, y_tr):
         c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
-        penalty = [None, 'elasticnet', 'l1', 'l2']
+        # 'none', 'elasticnet', 'l1',
+        penalty = ['l2']
         solver = ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
 
         param_grid = {'C': c_range,

@@ -65,8 +65,8 @@ class ARDetectorByLogisticRegression:
         # summarize the results of the grid search
         print('Summary of the model:')
         print(grid.best_score_)
-        print(grid.best_estimator_.nu)
-        print(grid.best_estimator_.gamma)
+        print(grid.best_estimator_.C)
+        print(grid.best_estimator_.solver)
 
         self._best_model = grid.best_estimator_
 
