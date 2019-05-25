@@ -5,6 +5,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from utils.confusion_matrix_drawer import plot_confusion_matrix
 from utils.numpy_encoder import NumpyEncoder
@@ -88,3 +89,8 @@ class ARDetectorByRandomForest:
 
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
         plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/random_forest_' + self._antibiotic_name + '.png')
+
+        y_true = pd.Series(self._y_te, name="Actual")
+        y_pred = pd.Series(y_pred, name="Predicted")
+        df_confusion = pd.crosstab(y_true, y_pred)
+        df_confusion.to_csv(self._results_directory + 'confusion_matrices/' + self._target_directory + '/dnn_' + self._antibiotic_name + '.csv')

@@ -12,20 +12,19 @@ def main():
     args = docopt("""
     Usage: 
         run.py find_mutations <target_base_directory> <target_directory_ids>
-        run.py train_models <models> <directory_containing_results> [--tfidf=<tfidf>]
+        run.py train_models <models> <directory_containing_results> [--data_representation=<data_representation>]
 
     Options:
         -h --help   : show this
-        --tdidf=<tdidf> whether tdidf would be used or not
+        --data_representation=<data_representation> which data representation would be used, e.g: tfidf, tfrf
     """)
 
     target_base_directory = args['<target_base_directory>']
 
-    use_tfidf = False
+    data_representation = 'binary'
 
-    if args['--tfidf']:
-        print('Feature matrix would be created with tf-idf')
-        use_tfidf = args['--tfidf']
+    if args['--data_representation']:
+        data_representation = args['--data_representation']
 
     if args['find_mutations']:
         target_directories_str = args['<target_directory_ids>']
@@ -49,10 +48,10 @@ def main():
                               'snp_09_bcf_nu_indel_09_bcf_all': [
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv',
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_bcftools_0.0_all.csv'],
-                              'snp_09_playpus_nu_indel_00_platypus_all': [
+                              'snp_09_platiypus_nu_indel_00_platypus_all': [
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_notunique.csv',
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv'],
-                              'snp_09_playpus_nu_indel_00_bcf_all': [
+                              'snp_09_platypus_nu_indel_00_bcf_all': [
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_platypus_0.9_notunique.csv',
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_bcftools_0.0_all.csv'],
                               'snp_09_bcf_platypus_nu_indel_00_bcf_platypus_all': [
@@ -62,16 +61,15 @@ def main():
                                   '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
                               }
 
-        if use_tfidf:
-            for k, v in feature_selections.items():
-                feature_selections['tfidf_' + k] = v
-                del feature_selections[k]
+        for k, v in feature_selections.items():
+            feature_selections[data_representation + '_' + k] = v
+            del feature_selections[k]
 
-        model_manager = ModelManager(models)
+        model_manager = ModelManager(models, data_representation=data_representation)
         for k, v in feature_selections.items():
             print("Models would be trained and tested for feature selection method: " + k)
-            raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v, use_tfidf=use_tfidf)
             raw_label_matrix = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/labels.csv')
+            raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
             model_manager.train_and_test_models(results_directory, k, raw_feature_matrix, raw_label_matrix)
 
 

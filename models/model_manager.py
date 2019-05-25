@@ -1,4 +1,5 @@
 import numpy as np
+from pandas.core.common import random_state
 from sklearn.model_selection import train_test_split
 
 from models.dnn import ArDetectorByDNN
@@ -8,15 +9,19 @@ from models.svm_rbf import ARDetectorBySVMWithRBF
 
 
 ######################################################################
-target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin']
+from preprocess.data_representation_preparer import DataRepresentationPreparer
+
+target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 label_tags = 'phenotype'
 TRADITIONAL_ML_SCORING = 'f1'
-TEST_SIZE = 0.3
+TEST_SIZE = 0.2
 ######################################################################
 
 
 class ModelManager:
-    def __init__(self, models):
+    def __init__(self, models, data_representation='binary'):
+        self.data_representation = data_representation
+
         # Set which models would be trained
         models_arr = models.split(',')
         self.enable_svm = False
@@ -36,11 +41,30 @@ class ModelManager:
 
     def train_and_test_models(self, results_directory, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(target_drugs)):
-            x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[:, i])
-            x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=TEST_SIZE)
+            x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
+
+            # Random state is used to make train and test split the same on each iteration
+            if self.data_representation == 'tfidf':
+                x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
+            elif self.data_representation == 'tfrf':
+                x = DataRepresentationPreparer.update_feature_matrix_with_tf_rf(x, y)
+            elif self.data_representation == 'bm25tfidf':
+                pass
+            elif self.data_representation == 'bm25tfrf':
+                pass
+            else:
+                # Assumed binary data representation would be used
+                pass
+
+            # Update weights of features if necessary
+            x = x.values
+            y = y.values
+            x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=TEST_SIZE, random_state=0)
+
             print("For the antibiotic " + target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
             print("Size of test dataset " + str(np.shape(x_test)))
+
             #####################################
             #                                   #
             #           SVM with rbf            #
@@ -101,8 +125,6 @@ class ModelManager:
                                               feature_selection,
                                               target_drugs[i],
                                               np.shape(x_train)[1],
-                                              [256, 128, 64],
-                                              ['relu', 'relu', 'relu'],
                                               label_tags=label_tags
                                               )
 
@@ -110,6 +132,11 @@ class ModelManager:
 
                 self.test_dnn(ar_detector, x_test, y_test)
 
+            #####################################
+            #                                   #
+            #        Logistic Regression        #
+            #                                   #
+            #####################################
             if self.enable_lr:
                 ar_detector = ARDetectorByLogisticRegression(results_directory,
                                                              feature_selection,
@@ -131,10 +158,14 @@ class ModelManager:
                                               y_test)
 
     def filter_out_nan(self, x, y):
-        index_to_remove = np.argwhere(np.isnan(y))
+        index_to_remove = y[y.isna() == True].index
+        #index_to_remove = np.argwhere(np.isnan(y)).values
 
-        xx = np.delete(x, index_to_remove, axis=0)
-        yy = np.delete(y, index_to_remove, axis=0)
+        xx = x.drop(index_to_remove, inplace=False)
+        yy = y.drop(index_to_remove, inplace=False)
+
+        #xx = np.delete(x, index_to_remove, axis=0)
+        #yy = np.delete(y, index_to_remove, axis=0)
 
         return xx, yy
 
@@ -202,18 +233,25 @@ class ModelManager:
 
     def train_dnn(self, ar_detector, x_tr, y_tr):
         # Optimizers to be tried are selected according to Karpathy's following blog page: https://medium.com/@karpathy/a-peek-at-trends-in-machine-learning-ab8a1085a106
-        param_grid = dict(epochs=[50],
-                          batch_size=[1, 50, 100],
+        # hidden units and activation functions elements must be the same sized because they would create a hidden layer together
+        param_grid = dict(hidden_units=[[128], [1024], [4096]],
+                          activation_functions=[['relu'], ['tanh'], ['linear']],
+                          epochs=[100],
+                          batch_size=[50, 100],
                           optimizer=['RMSprop', 'Adam', 'Adagrad', 'Adadelta'],
-                          dropout_rate=[0.0, 0.5, 0.9],
+                          dropout_rate=[0.0, 0.25, 0.5],
                           batch_normalization_required=[True])
+
         """
-        param_grid = dict(epochs=[50, 100],
+        param_grid = dict(hidden_units=[[256]],
+                          activation_functions=[['relu'], ['linear']],
+                          epochs=[100],
                           batch_size=[100],
                           optimizer=['Adam', 'RMSprop'],
-                          dropout_rate=[0.9],
-                          batch_normalization_required=[False, True])
+                          dropout_rate=[0.25],
+                          batch_normalization_required=[True])
         """
+
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
 

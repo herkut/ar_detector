@@ -8,7 +8,8 @@ from keras.engine.saving import model_from_json
 from keras.layers import Dense, BatchNormalization, Dropout
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -17,7 +18,7 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ArDetectorByDNN:
-    def __init__(self, results_directory, feature_selection, antibiotic_name, feature_size, hidden_units, activation_functions, label_tags='phenotype', metrics=['accuracy']):
+    def __init__(self, results_directory, feature_selection, antibiotic_name, feature_size, label_tags='phenotype', metrics=['accuracy']):
         self._x_tr = None
         self._y_tr = None
         self._x_te = None
@@ -28,26 +29,32 @@ class ArDetectorByDNN:
         self._feature_size = feature_size
         self._label_tags = label_tags
 
-        self._hidden_units = hidden_units
-        self._activation_functions = activation_functions
         self._metrics = metrics
 
         self._best_model = None
         self._target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
 
-    def create_model(self, batch_normalization_required=False, optimizer='adam', dropout_rate=0.0):
+    def create_model(self, hidden_units=[16], activation_functions=['relu'], batch_normalization_required=False, optimizer='adam', dropout_rate=0.0):
+        # Clear tensorflow graphs to avoid OOM
+        if K.backend() == 'tensorflow':
+            K.clear_session()
+
         model = Sequential()
+        self._target_directory = 'dnn_' + self._metrics[0] + '_' + self._label_tags + '_' + self._feature_selection
 
         # Initialize first hidden layer
-        model.add(Dense(self._hidden_units[0], input_dim=self._feature_size, activation=self._activation_functions[0]))
+        model.add(Dense(hidden_units[0], input_dim=self._feature_size, activation=activation_functions[0]))
         if batch_normalization_required:
             model.add(BatchNormalization())
         model.add(Dropout(dropout_rate))
-        for i in range(1, len(self._hidden_units)):
-            model.add(Dense(self._hidden_units[i], activation=self._activation_functions[i]))
+        self._target_directory = self._target_directory + '_' + str(hidden_units[0]) + '-' + activation_functions[0]
+
+        for i in range(1, len(hidden_units)):
+            model.add(Dense(hidden_units[i], activation=activation_functions[i]))
             if batch_normalization_required:
                 model.add(BatchNormalization())
             model.add(Dropout(dropout_rate))
+            self._target_directory = self._target_directory + '_' + str(hidden_units[i]) + '-' + activation_functions[i]
         # Binary classification would be done for each antibiotic separately
         model.add(Dense(1, activation='sigmoid'))
 
@@ -74,14 +81,18 @@ class ArDetectorByDNN:
 
         es = callbacks.EarlyStopping(monitor='loss',
                                      min_delta=0,
-                                     patience=2,
+                                     patience=10,
                                      verbose=0,
                                      mode='auto')
 
+        kfold = StratifiedKFold(n_splits=5, random_state=0)
         grid = GridSearchCV(estimator=model,
-                            param_grid=param_grid)
+                            param_grid=param_grid,
+                            cv=kfold,
+                            n_jobs=1)
 
         grid_result = grid.fit(self._x_tr, self._y_tr, callbacks=[es])
+        #grid_result = grid.fit(self._x_tr, self._y_tr)
 
         print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
         means = grid_result.cv_results_['mean_test_score']
@@ -160,6 +171,11 @@ class ArDetectorByDNN:
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
         plt.savefig(self._results_directory + 'confusion_matrices/' + self._target_directory + '/dnn_' + self._antibiotic_name + '.png')
+
+        y_true = pd.Series(self._y_te, name="Actual")
+        y_pred = pd.Series(y_pred[:, 0], name="Predicted")
+        df_confusion = pd.crosstab(y_true, y_pred)
+        df_confusion.to_csv(self._results_directory + 'confusion_matrices/' + self._target_directory + '/dnn_' + self._antibiotic_name + '.csv')
 
         if K.backend() == 'tensorflow':
             K.clear_session()
