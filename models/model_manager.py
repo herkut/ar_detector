@@ -49,9 +49,9 @@ class ModelManager:
             elif self.data_representation == 'tfrf':
                 x = DataRepresentationPreparer.update_feature_matrix_with_tf_rf(x, y)
             elif self.data_representation == 'bm25tfidf':
-                pass
+                x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_idf(x)
             elif self.data_representation == 'bm25tfrf':
-                pass
+                x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_rf(x, y)
             else:
                 # Assumed binary data representation would be used
                 pass
