@@ -7,6 +7,7 @@ from keras import Sequential, callbacks
 from keras.engine.saving import model_from_json
 from keras.layers import Dense, BatchNormalization, Dropout
 from keras.wrappers.scikit_learn import KerasClassifier
+from keras.callbacks import TensorBoard
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 import pandas as pd
@@ -78,7 +79,12 @@ class ArDetectorByDNN:
 
     def tune_hyperparameters(self, param_grid):
         model = KerasClassifier(build_fn=self.create_model, verbose=1)
-
+        # tensorboard callback
+        tb_callback = TensorBoard(log_dir=self._results_directory + '/logs',
+                                  write_graph=True,
+                                  write_grads=True,
+                                  write_images=True)
+        # early stopping callback
         es = callbacks.EarlyStopping(monitor='loss',
                                      min_delta=0,
                                      patience=10,
