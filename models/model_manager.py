@@ -235,22 +235,12 @@ class ModelManager:
         # Optimizers to be tried are selected according to Karpathy's following blog page: https://medium.com/@karpathy/a-peek-at-trends-in-machine-learning-ab8a1085a106
         # hidden units and activation functions elements must be the same sized because they would create a hidden layer together
         param_grid = dict(hidden_units=[[128], [1024], [4096]],
-                          activation_functions=[['relu'], ['tanh'], ['linear']],
+                          activation_functions=[['relu'], ['tanh']],
                           epochs=[100],
                           batch_size=[50, 100],
                           optimizer=['RMSprop', 'Adam', 'Adagrad', 'Adadelta'],
                           dropout_rate=[0.0, 0.25, 0.5],
                           batch_normalization_required=[True])
-
-        """
-        param_grid = dict(hidden_units=[[256]],
-                          activation_functions=[['relu'], ['linear']],
-                          epochs=[100],
-                          batch_size=[100],
-                          optimizer=['Adam', 'RMSprop'],
-                          dropout_rate=[0.25],
-                          batch_normalization_required=[True])
-        """
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
