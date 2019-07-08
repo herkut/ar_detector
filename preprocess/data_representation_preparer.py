@@ -34,9 +34,10 @@ class DataRepresentationPreparer:
 
         return tfrf
 
+    # k parameter is taken from Özlem's paper named 'Statistical representation models for mutation information within genomic data'
     @staticmethod
     def update_feature_matrix_with_bm25_tf_idf(feature_matrix):
-        k = 1
+        k = 0.8
         # Compute term frequencies
         tf = feature_matrix.divide((1 + np.sum(feature_matrix, axis=1)), axis=0)
         bm25tf = ((k + 1) * tf).divide(k + tf)
@@ -48,9 +49,10 @@ class DataRepresentationPreparer:
 
         return bm25tfidf
 
+    # k parameter is taken from Özlem's paper named 'Statistical representation models for mutation information within genomic data'
     @staticmethod
     def update_feature_matrix_with_bm25_tf_rf(feature_matrix, labels):
-        k = 1
+        k = 0.8
         # Compute term frequencies
         tf = feature_matrix.divide((1 + np.sum(feature_matrix, axis=1)), axis=0)
         bm25tf = ((k + 1) * tf).divide(k + tf)
