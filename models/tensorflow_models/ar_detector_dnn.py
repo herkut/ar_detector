@@ -1,6 +1,4 @@
 import tensorflow as tf
-from sklearn.model_selection import StratifiedKFold
-import numpy as np
 
 
 class Dnn1D:
@@ -138,6 +136,12 @@ class Dnn1D:
 
     def get_accuracy(self, session, x, y_one_hot_encoded, class_weights):
         return session.run(self.accuracy,
+                           feed_dict={self.X: x,
+                                      self.Y: y_one_hot_encoded,
+                                      self.class_weights: class_weights})
+
+    def get_predictions(self, session, x, y_one_hot_encoded, class_weights):
+        return session.run(self.prediction,
                            feed_dict={self.X: x,
                                       self.Y: y_one_hot_encoded,
                                       self.class_weights: class_weights})
