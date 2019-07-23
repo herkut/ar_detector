@@ -14,8 +14,11 @@ from preprocess.data_representation_preparer import DataRepresentationPreparer
 
 
 ######################################################################
+first_line_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide']
 target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 label_tags = 'phenotype'
+directory_containing_indexes = '/run/media/herkut/herkut/TB_genomes/dataset-1-train_test_indexes/'
+directory_containing_model_logs = '/run/media/herkut/hdd-1/TB_genomes/ar_detector_results/logs/'
 TEST_SIZE = 0.2
 ######################################################################
 
@@ -40,6 +43,14 @@ class TensorflowModelManager:
                 for i in range(len(target_drugs)):
                     x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
 
+                    tr_indexes = np.genfromtxt(directory_containing_indexes + target_drugs[i] + '_tr_indices.csv',
+                                               delimiter=' ',
+                                               dtype=np.int32)
+
+                    te_indexes = np.genfromtxt(directory_containing_indexes + target_drugs[i] + '_te_indices.csv',
+                                               delimiter=' ',
+                                               dtype=np.int32)
+
                     # Random state is used to make train and test split the same on each iteration
                     if self.data_representation == 'tfidf':
                         x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
@@ -53,14 +64,13 @@ class TensorflowModelManager:
                         # Assumed binary data representation would be used
                         pass
 
-                    # Update weights of features if necessary
+                    x_tr = x.loc[tr_indexes].values
+                    y_tr = y.loc[tr_indexes].values
+                    x_te = x.loc[te_indexes].values
+                    y_te = y.loc[te_indexes].values
+
                     x = x.values
                     y = y.values
-                    x_train, x_test, y_train, y_test = train_test_split(x,
-                                                                        y,
-                                                                        stratify=y,
-                                                                        test_size=TEST_SIZE,
-                                                                        random_state=0)
 
                     class_weights = np.zeros(2)
 
@@ -72,21 +82,21 @@ class TensorflowModelManager:
                     print('Class weights: ' + str(class_weights))
 
                     print("For the antibiotic " + target_drugs[i])
-                    print("Size of training dataset " + str(np.shape(x_train)))
-                    print("Size of test dataset " + str(np.shape(x_test)))
+                    print("Size of training dataset " + str(np.shape(x_tr)))
+                    print("Size of test dataset " + str(np.shape(x_te)))
 
                     model_info = model.split('-')
                     model_dim = model_info[1].split('d')[0]
 
                     if int(model_dim) == 1:
-                        ar_detector = Dnn1D(x_train.shape[1], 2)
+                        ar_detector = Dnn1D(x_tr.shape[1], 2)
                     elif int(model_dim) == 2:
-                        ar_detector = Dnn2D(x_train.shape[1], 2)
+                        ar_detector = Dnn2D(x_tr.shape[1], 2)
                     else:
-                        ar_detector = DnnND(x_train.shape[1], 2, model_dim)
+                        ar_detector = DnnND(x_tr.shape[1], 2, model_dim)
 
                     ar_detector.set_antibiotic_name(target_drugs[i])
-                    self.train_dnn_with_gridsearch(ar_detector, x_train, y_train, class_weights)
+                    self.train_dnn_with_gridsearch(ar_detector, x_tr, y_tr, class_weights)
                     # self.train_dnn_with_randomsearch(ar_detector)
 
     def filter_out_nan(self, x, y):
@@ -99,11 +109,25 @@ class TensorflowModelManager:
 
     def train_dnn_with_gridsearch(self, ar_detector, x_tr, y_tr, class_weights):
         # Optimizers to be tried are selected according to Karpathy's following blog page: https://medium.com/@karpathy/a-peek-at-trends-in-machine-learning-ab8a1085a106
+
         # hidden units and activation functions elements must be the same sized because they would create a hidden layer together
+        # Single layer neural network
         hidden_units=[[128], [1024], [4096]]
-        activation_functions=[['relu'], ['leaky_relu'], ['elu'], ['tanh']]
+
+        #activation_functions=[['relu'], ['leaky_relu'], ['elu'], ['tanh']]
+        activation_functions = [['relu'], ['leaky_relu']]
+
+        """
+        # Two layers neural network
+        hidden_units = [[512, 128], [512, 512], [128,512]]
+
+        activation_functions = [['leaky_relu', 'leaky_relu'], ['relu', 'relu']]
+        """
         learning_rates = [0.1, 0.01, 0.001]
-        optimizers=['RMSprop', 'Adam', 'Adagrad', 'Adadelta']
+
+        #optimizers=['RMSprop', 'Adam', 'Adagrad', 'Adadelta']
+        optimizers = ['Adam']
+
         dropout_rates=[0.0, 0.25, 0.5]
 
         kfold_indices = get_k_fold_validation_indices(5, x_tr, y_tr)
@@ -145,6 +169,9 @@ class TensorflowModelManager:
                             result['training_costs'] = []
                             result['validation_costs'] = []
 
+                            # would be used as a lower limit for early stopping, it is used to prevent stopping at first epochs
+                            min_iteration = 100
+
                             kfold_indices = get_k_fold_validation_indices(5, x_tr, y_tr)
 
                             start = timeit.default_timer()
@@ -165,8 +192,8 @@ class TensorflowModelManager:
                                     session.run(tf.global_variables_initializer())
 
                                     # create log file writer to record training progress.
-                                    training_writer = tf.summary.FileWriter(r'/run/media/herkut/hdd-1/TB_genomes/ar_detector_results/logs/training', session.graph)
-                                    testing_writer = tf.summary.FileWriter(r'/run/media/herkut/hdd-1/TB_genomes/ar_detector_results/logs/testing', session.graph)
+                                    training_writer = tf.summary.FileWriter(directory_containing_model_logs + 'training', session.graph)
+                                    testing_writer = tf.summary.FileWriter(directory_containing_model_logs + 'testing', session.graph)
 
                                     for epoch in range(2000):
                                         # Feed in the training data and do one step of neural network training
@@ -180,6 +207,7 @@ class TensorflowModelManager:
                                         session.run(optimizer, feed_dict={X:x_tr[minibatch_count*bs:,:], Y:y_tr_one_hot_encoded[minibatch_count*bs:,:], WO: class_weights})
                                         """
 
+                                        # TODO Convert early stopping metric from min of cost to max of accuracy
                                         tr_cost = ar_detector.get_cost(session, x_tr[train_indices], y_tr_one_hot_encoded[train_indices], class_weights)
                                         val_cost = ar_detector.get_cost(session, x_tr[validation_indices], y_tr_one_hot_encoded[validation_indices], class_weights)
                                         if epoch == 0:
@@ -195,7 +223,7 @@ class TensorflowModelManager:
                                         val_accuracy = ar_detector.get_accuracy(session, x_tr[validation_indices], y_tr_one_hot_encoded[validation_indices], class_weights)
 
                                         # Early stopping done like in bengio's random search paper
-                                        if epoch / 2 > best_val_cost_index:
+                                        if epoch / 2 > best_val_cost_index and epoch > min_iteration:
                                             print('Early stopping at epoch: ' + str(epoch))
                                             print(epoch, tr_cost, val_cost, tr_accuracy, val_accuracy)
 
@@ -266,7 +294,6 @@ class TensorflowModelManager:
                 'w') as fp:
             json.dump(grid_search_results, fp)
 
-
     def test_dnn(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
@@ -277,3 +304,38 @@ class TensorflowModelManager:
     def set_feature_selection(self, feature_selection):
         self.feature_selection = feature_selection
 
+    def extract_results(self, session, ar_detector, x, y_one_hot_encoded, class_weights):
+        tp = 0
+        tn = 0
+        fp = 0
+        fn = 0
+        results = {}
+
+        predictions = ar_detector.get_predictions(session, x, y_one_hot_encoded, class_weights)
+
+        for i in range(len(y_one_hot_encoded)):
+            if np.argmax(y_one_hot_encoded[i]) == 1 and np.argmax(predictions[i]) == 1:
+                tp = tp + 1
+            elif np.argmax(y_one_hot_encoded[i]) == 1 and np.argmax(predictions[i]) == 0:
+                fn = fn + 1
+            elif np.argmax(y_one_hot_encoded[i]) == 0 and np.argmax(predictions[i]) == 0:
+                tn = tn + 1
+            elif np.argmax(y_one_hot_encoded[i]) == 0 and np.argmax(predictions[i]) == 1:
+                fp = fp + 1
+
+        print('Recall/Sensitivity: ' + str(tp / (tp + fn)))
+        print('Precision: ' + str(tp / (tp + fp)))
+        print('Specificity: ' + str(tn / (tn + fp)))
+        # F1 = 2 * (precision * recall) / (precision + recall)
+        print('F1 score: ' + str(2 * ((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn)))))
+
+        results['tp'] = tp
+        results['tn'] = tn
+        results['fp'] = fp
+        results['fn'] = fn
+        results['recall'] = tp / (tp + fn)
+        results['precision'] = tp / (tp + fp)
+        results['specificity'] = tn / (tn + fp)
+        results['f1_score'] = 2 * ((tp / (tp + fp)) * (tp / (tp + fn))) / ((tp / (tp + fp)) + (tp / (tp + fn)))
+
+        return results
