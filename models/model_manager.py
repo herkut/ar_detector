@@ -14,6 +14,7 @@ from preprocess.data_representation_preparer import DataRepresentationPreparer
 target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 label_tags = 'phenotype'
 TRADITIONAL_ML_SCORING = 'f1'
+directory_containing_indexes = '/run/media/herkut/herkut/TB_genomes/dataset-1-train_test_indexes/'
 TEST_SIZE = 0.2
 ######################################################################
 
@@ -43,6 +44,14 @@ class ModelManager:
         for i in range(len(target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
 
+            tr_indexes = np.genfromtxt(directory_containing_indexes + target_drugs[i] + '_tr_indices.csv',
+                                       delimiter=' ',
+                                       dtype=np.int32)
+
+            te_indexes = np.genfromtxt(directory_containing_indexes + target_drugs[i] + '_te_indices.csv',
+                                       delimiter=' ',
+                                       dtype=np.int32)
+
             # Random state is used to make train and test split the same on each iteration
             if self.data_representation == 'tfidf':
                 x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
@@ -57,9 +66,20 @@ class ModelManager:
                 pass
 
             # Update weights of features if necessary
+            x_train = x.loc[tr_indexes].values
+            y_train = y.loc[tr_indexes].values
+            x_test = x.loc[te_indexes].values
+            y_test = y.loc[te_indexes].values
+
             x = x.values
             y = y.values
-            x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=TEST_SIZE, random_state=0)
+
+            class_weights = np.zeros(2)
+
+            unique, counts = np.unique(y, return_counts=True)
+
+            class_weights[0] = counts[1] / (counts[0] + counts[1])
+            class_weights[1] = counts[0] / (counts[0] + counts[1])
 
             print("For the antibiotic " + target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
@@ -75,7 +95,8 @@ class ModelManager:
                                                      feature_selection,
                                                      target_drugs[i],
                                                      label_tags=label_tags,
-                                                     scoring=TRADITIONAL_ML_SCORING)
+                                                     scoring=TRADITIONAL_ML_SCORING,
+                                                     class_weights=class_weights)
                 # train the model
                 self.train_svm_with_rbf(ar_detector,
                                         x_train,
@@ -85,7 +106,8 @@ class ModelManager:
                                                      feature_selection,
                                                      target_drugs[i],
                                                      label_tags=label_tags,
-                                                     scoring=TRADITIONAL_ML_SCORING)
+                                                     scoring=TRADITIONAL_ML_SCORING,
+                                                     class_weights=class_weights)
                 self.test_svm_with_rbf(ar_detector,
                                        x_test,
                                        y_test)
@@ -100,7 +122,8 @@ class ModelManager:
                                                        feature_selection,
                                                        target_drugs[i],
                                                        label_tags=label_tags,
-                                                       scoring=TRADITIONAL_ML_SCORING)
+                                                       scoring=TRADITIONAL_ML_SCORING,
+                                                       class_weights=class_weights)
                 # train the model
                 self.train_random_forest(ar_detector,
                                          x_train,
@@ -110,7 +133,8 @@ class ModelManager:
                                                        feature_selection,
                                                        target_drugs[i],
                                                        label_tags=label_tags,
-                                                       scoring=TRADITIONAL_ML_SCORING)
+                                                       scoring=TRADITIONAL_ML_SCORING,
+                                                       class_weights=class_weights)
                 self.test_random_forest(ar_detector,
                                         x_test,
                                         y_test)
@@ -142,7 +166,8 @@ class ModelManager:
                                                              feature_selection,
                                                              target_drugs[i],
                                                              label_tags=label_tags,
-                                                             scoring=TRADITIONAL_ML_SCORING)
+                                                             scoring=TRADITIONAL_ML_SCORING,
+                                                             class_weights=class_weights)
                 # train the model
                 self.train_logistic_regression(ar_detector,
                                                x_train,
@@ -152,7 +177,8 @@ class ModelManager:
                                                              feature_selection,
                                                              target_drugs[i],
                                                              label_tags=label_tags,
-                                                             scoring=TRADITIONAL_ML_SCORING)
+                                                             scoring=TRADITIONAL_ML_SCORING,
+                                                             class_weights=class_weights)
                 self.test_logistic_regression(ar_detector,
                                               x_test,
                                               y_test)

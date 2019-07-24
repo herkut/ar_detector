@@ -15,7 +15,7 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorBySVMWithRBF:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc'):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._x_tr = None
         self._y_tr = None
         self._x_te = None
@@ -23,7 +23,10 @@ class ARDetectorBySVMWithRBF:
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = label_tags
-        self._model = svm.SVC(kernel='rbf')
+        if class_weights is None:
+            self._model = svm.SVC(kernel='rbf')
+        else:
+            self._model = svm.SVC(kernel='rbf', class_weights=class_weights)
         self._best_model = None
         self._antibiotic_name = antibiotic_name
         self._scoring = scoring

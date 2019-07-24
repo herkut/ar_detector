@@ -15,7 +15,7 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorByLogisticRegression:
-    def __init__(self, results_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc'):
+    def __init__(self, results_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._x_tr = None
         self._y_tr = None
         self._x_te = None
@@ -26,7 +26,10 @@ class ARDetectorByLogisticRegression:
         self._label_tags = label_tags
         self._scoring = scoring
 
-        self._model = LogisticRegression()
+        if class_weights is None:
+            self._model = LogisticRegression()
+        else:
+            self._model = LogisticRegression(class_weight=class_weights)
 
         self._best_model = None
         self._target_directory = 'lr_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
