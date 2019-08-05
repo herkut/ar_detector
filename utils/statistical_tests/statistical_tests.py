@@ -81,8 +81,17 @@ def compare_models_wrt_5x2cv_paired_f_test(results_model1, results_model2):
     print("f estimation: " + str(f) + ' and f value with 95 confidence interval: ' + str(stats.f.ppf(1-0.05, 10, 5)))
     if f < stats.f.ppf(1-0.05, 10, 5):
         print('Models are not significantly different')
+        return 0
     else:
         print('Models are significantly different')
+        if np.mean(p_mat) < 0:
+            # model 2 is better
+            return -1
+        elif np.mean(p_mat) > 0:
+            # model 1 is better
+            return 1
+        else:
+            print('Boss, we have an issue')
 
 
 def choose_best_models(result_json_model1, result_json_model2):
