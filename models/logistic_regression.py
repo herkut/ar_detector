@@ -15,12 +15,12 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorByLogisticRegression:
-    def __init__(self, results_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._x_tr = None
         self._y_tr = None
         self._x_te = None
         self._y_te = None
-        self._results_directory = results_directory
+        self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._antibiotic_name = antibiotic_name
         self._label_tags = label_tags
@@ -56,7 +56,7 @@ class ARDetectorByLogisticRegression:
 
     def load_model(self):
         # load the model from disk
-        self._best_model = joblib.load(self._results_directory + 'best_models/' + self._target_directory + '/lr_' + self._antibiotic_name + '.sav')
+        self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/lr_' + self._antibiotic_name + '.sav')
 
     def tune_hyperparameters(self, param_grid):
         model = self._model
@@ -66,10 +66,10 @@ class ARDetectorByLogisticRegression:
 
         print(grid)
 
-        if not os.path.exists(self._results_directory + 'grid_search_scores/' + self._target_directory):
-            os.makedirs(self._results_directory + 'grid_search_scores/' + self._target_directory)
+        if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'grid_search_scores/' + self._target_directory)
 
-        with open(self._results_directory + 'grid_search_scores/' + self._target_directory + '/lr_' + self._antibiotic_name + '.json', 'w') as f:
+        with open(self._target_base_directory + 'grid_search_scores/' + self._target_directory + '/lr_' + self._antibiotic_name + '.json', 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
@@ -86,11 +86,11 @@ class ARDetectorByLogisticRegression:
 
         self._best_model = grid.best_estimator_
 
-        if not os.path.exists(self._results_directory + 'best_models/' + self._target_directory):
-            os.makedirs(self._results_directory + 'best_models/' + self._target_directory)
+        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
 
         # save the model to disk
-        filename = self._results_directory + 'best_models/' + self._target_directory + '/lr_' + self._antibiotic_name + '.sav'
+        filename = self._target_base_directory + 'best_models/' + self._target_directory + '/lr_' + self._antibiotic_name + '.sav'
         joblib.dump(self._best_model, filename)
 
     def predict_ar(self, x):
@@ -119,14 +119,14 @@ class ARDetectorByLogisticRegression:
 
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        if not os.path.exists(self._results_directory + 'confusion_matrices/' + self._target_directory):
-            os.makedirs(self._results_directory + 'confusion_matrices/' + self._target_directory)
+        if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'confusion_matrices/' + self._target_directory)
 
-        plt.savefig(self._results_directory + 'confusion_matrices/' + self._target_directory + '/normalized_lr_' + self._antibiotic_name + '.png')
+        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/normalized_lr_' + self._antibiotic_name + '.png')
 
         plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
-        plt.savefig(self._results_directory + 'confusion_matrices/' + self._target_directory + '/lr_' + self._antibiotic_name + '.png')
+        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/lr_' + self._antibiotic_name + '.png')
 
         y_true = pd.Series(self._y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
