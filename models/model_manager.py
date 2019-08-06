@@ -5,16 +5,15 @@ from sklearn.model_selection import train_test_split
 from models.dnn import ArDetectorByDNN
 from models.logistic_regression import ARDetectorByLogisticRegression
 from models.random_forest import ARDetectorByRandomForest
-from models.svm_rbf import ARDetectorBySVMWithRBF
-
+from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
 
 ######################################################################
 from preprocess.data_representation_preparer import DataRepresentationPreparer
 
 target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 label_tags = 'phenotype'
-TRADITIONAL_ML_SCORING = 'f1'
-directory_containing_indexes = '/run/media/herkut/herkut/TB_genomes/dataset-1-train_test_indexes/'
+TRADITIONAL_ML_SCORING = 'accuracy'
+directory_containing_indexes = '/run/media/herkut/hdd-1/TB_genomes/features/dataset-1-train_test_indexes/'
 TEST_SIZE = 0.2
 ######################################################################
 
@@ -74,12 +73,11 @@ class ModelManager:
             x = x.values
             y = y.values
 
-            class_weights = np.zeros(2)
+            class_weights_arr = {}
 
             unique, counts = np.unique(y, return_counts=True)
 
-            class_weights[0] = counts[1] / (counts[0] + counts[1])
-            class_weights[1] = counts[0] / (counts[0] + counts[1])
+            class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
             print("For the antibiotic " + target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
@@ -108,6 +106,32 @@ class ModelManager:
                                                      label_tags=label_tags,
                                                      scoring=TRADITIONAL_ML_SCORING,
                                                      class_weights=class_weights)
+                self.test_svm_with_rbf(ar_detector,
+                                       x_test,
+                                       y_test)
+            #####################################
+            #                                   #
+            #         SVM with linear           #
+            #                                   #
+            #####################################
+            if self.enable_svm:
+                ar_detector = ARDetectorBySVMWithLinear(results_directory,
+                                                        feature_selection,
+                                                        target_drugs[i],
+                                                        label_tags=label_tags,
+                                                        scoring=TRADITIONAL_ML_SCORING,
+                                                        class_weights=class_weights)
+                # train the model
+                self.train_svm_with_rbf(ar_detector,
+                                        x_train,
+                                        y_train)
+                # test the model
+                ar_detector = ARDetectorBySVMWithLinear(results_directory,
+                                                        feature_selection,
+                                                        target_drugs[i],
+                                                        label_tags=label_tags,
+                                                        scoring=TRADITIONAL_ML_SCORING,
+                                                        class_weights=class_weights)
                 self.test_svm_with_rbf(ar_detector,
                                        x_test,
                                        y_test)
@@ -212,6 +236,22 @@ class ModelManager:
 
         print(ar_detector._best_model)
 
+    def train_svm_with_linear(self, ar_detector, x_tr, y_tr):
+        # conduct svm model
+        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
+
+        param_grid = {'C': c_range}
+
+        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
+        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
+        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
+
+        ar_detector.initialize_train_dataset(x_tr, y_tr)
+
+        ar_detector.tune_hyperparameters(param_grid)
+
+        print(ar_detector._best_model)
+
     def train_random_forest(self, ar_detector, x_tr, y_tr):
         # bootstrap = [True, False]
         n_estimators = [100, 250, 500, 1000]
@@ -275,6 +315,13 @@ class ModelManager:
         ar_detector.tune_hyperparameters(param_grid)
 
     def test_svm_with_rbf(self, ar_detector, x_te, y_te):
+        print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
+
+        ar_detector.initialize_test_dataset(x_te, y_te)
+        ar_detector.load_model()
+        ar_detector.test_model()
+
+    def test_svm_with_linear(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.initialize_test_dataset(x_te, y_te)

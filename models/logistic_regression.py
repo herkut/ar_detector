@@ -63,10 +63,16 @@ class ARDetectorByLogisticRegression:
         if not os.path.exists(self._results_directory + 'grid_search_scores/' + self._target_directory):
             os.makedirs(self._results_directory + 'grid_search_scores/' + self._target_directory)
 
-        with open(self._results_directory + 'grid_search_scores/' + self._target_directory + '/lr_' + self._antibiotic_name + '.json','w') as f:
+        with open(self._results_directory + 'grid_search_scores/' + self._target_directory + '/lr_' + self._antibiotic_name + '.json', 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
+        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
+            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
+
+        with open(self._target_base_directory + 'best_models/' + self._target_directory + '/lr_' + self._antibiotic_name + '.json', 'w') as f:
+            f.write(json.dumps(grid.best_params_, cls=NumpyEncoder))
+
         print('Summary of the model:')
         print(grid.best_score_)
         print(grid.best_estimator_.C)
@@ -113,4 +119,4 @@ class ARDetectorByLogisticRegression:
         y_true = pd.Series(self._y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
-        df_confusion.to_csv(self._results_directory + 'confusion_matrices/' + self._target_directory + '/dnn_' + self._antibiotic_name + '.csv')
+        df_confusion.to_csv(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/lr_' + self._antibiotic_name + '.csv')
