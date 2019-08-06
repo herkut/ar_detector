@@ -4,6 +4,7 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -30,6 +31,26 @@ class ARDetectorByRandomForest:
         self._antibiotic_name = antibiotic_name
         self._scoring = scoring
         self._target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+
+    def reinitialize_model_with_parameters(self, n_estimators, max_features, bootstrap=None, max_depth=None, class_weights=None):
+        if class_weights is None:
+            if bootstrap is not None and max_depth is not None:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, bootstrap=bootstrap, max_depth=max_depth)
+            elif bootstrap is not None and max_depth is None:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, bootstrap=bootstrap)
+            elif bootstrap is None and max_depth is not None:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, max_depth=max_depth)
+            else:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features)
+        else:
+            if bootstrap is not None and max_depth is not None:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, bootstrap=bootstrap, max_depth=max_depth, class_weight=class_weights)
+            elif bootstrap is not None and max_depth is None:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, bootstrap=bootstrap, class_weight=class_weights)
+            elif bootstrap is None and max_depth is not None:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, max_depth=max_depth, class_weight=class_weights)
+            else:
+                self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, class_weight=class_weights)
 
     def initialize_train_dataset(self, x_tr, y_tr):
         self._x_tr = x_tr
@@ -87,6 +108,12 @@ class ARDetectorByRandomForest:
 
     def predict_ar(self, x):
         self._best_model.predict(x)
+
+    def train_model(self):
+        self._model.fit(self._x_tr, self._y_tr)
+        y_pred = self._model.predict(self._x_te)
+        print(confusion_matrix(self._y_te, y_pred))
+        print(classification_report(self._y_te, y_pred))
 
     def test_model(self):
         y_pred = self._best_model.predict(self._x_te)

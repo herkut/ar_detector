@@ -4,7 +4,7 @@ import os
 
 from sklearn.externals import joblib
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
@@ -33,6 +33,12 @@ class ARDetectorByLogisticRegression:
 
         self._best_model = None
         self._target_directory = 'lr_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+
+    def reinitialize_model_with_parameters(self, c, penalty, solver, class_weights=None):
+        if class_weights is None:
+            self._model = LogisticRegression(C=c, penalty=penalty, solver=solver)
+        else:
+            self._model = LogisticRegression(C=c, penalty=penalty, solver=solver, class_weight=class_weights)
 
     def initialize_train_dataset(self, x_tr, y_tr):
         self._x_tr = x_tr
@@ -89,6 +95,12 @@ class ARDetectorByLogisticRegression:
 
     def predict_ar(self, x):
         self._best_model.predict(x)
+
+    def train_model(self):
+        self._model.fit(self._x_tr, self._y_tr)
+        y_pred = self._model.predict(self._x_te)
+        print(confusion_matrix(self._y_te, y_pred))
+        print(classification_report(self._y_te, y_pred))
 
     def test_model(self):
         y_pred = self._best_model.predict(self._x_te)

@@ -5,7 +5,7 @@ import os
 import numpy as np
 from sklearn import svm
 from sklearn.externals import joblib
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -31,6 +31,12 @@ class ARDetectorBySVMWithRBF:
         self._antibiotic_name = antibiotic_name
         self._scoring = scoring
         self._target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+
+    def reinitialize_model_with_parameters(self, c, gamma, class_weights=None):
+        if class_weights is None:
+            self._model = svm.SVC(kernel='rbf', C=c, gamma=gamma)
+        else:
+            self._model = svm.SVC(kernel='rbf', C=c, gamma=gamma, class_weight=class_weights)
 
     def initialize_train_dataset(self, x_tr, y_tr):
         self._x_tr = x_tr
@@ -87,6 +93,12 @@ class ARDetectorBySVMWithRBF:
     def predict_ar(self, x):
         self._best_model.predict(x)
 
+    def train_model(self):
+        self._model.fit(self._x_tr, self._y_tr)
+        y_pred = self._model.predict(self._x_te)
+        print(confusion_matrix(self._y_te, y_pred))
+        print(classification_report(self._y_te, y_pred))
+
     def test_model(self):
         y_pred = self._best_model.predict(self._x_te)
 
@@ -129,13 +141,19 @@ class ARDetectorBySVMWithLinear:
         self._feature_selection = feature_selection
         self._label_tags = label_tags
         if class_weights is None:
-            self._model = svm.SVC(kernel='rbf')
+            self._model = svm.SVC(kernel='linear')
         else:
-            self._model = svm.SVC(kernel='rbf', class_weight=class_weights)
+            self._model = svm.SVC(kernel='linear', class_weight=class_weights)
         self._best_model = None
         self._antibiotic_name = antibiotic_name
         self._scoring = scoring
         self._target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+
+    def reinitialize_model_with_parameters(self, c, class_weights=None):
+        if class_weights is None:
+            self._model = svm.SVC(kernel='linear', C=c)
+        else:
+            self._model = svm.SVC(kernel='linear', C=c, class_weight=class_weights)
 
     def initialize_train_dataset(self, x_tr, y_tr):
         self._x_tr = x_tr
@@ -191,11 +209,17 @@ class ARDetectorBySVMWithLinear:
     def predict_ar(self, x):
         self._best_model.predict(x)
 
+    def train_model(self):
+        self._model.fit(self._x_tr, self._y_tr)
+        y_pred = self._model.predict(self._x_te)
+        print(confusion_matrix(self._y_te, y_pred))
+        print(classification_report(self._y_te, y_pred))
+
     def test_model(self):
         y_pred = self._best_model.predict(self._x_te)
 
         cm = confusion_matrix(self._y_te, y_pred)
-        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2 :
+        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
             sensitivity = float(cm[0][0]) / np.sum(cm[0])
             specificity = float(cm[1][1]) / np.sum(cm[1])
             print('For ' + self._antibiotic_name)
