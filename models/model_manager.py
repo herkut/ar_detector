@@ -24,14 +24,17 @@ class ModelManager:
 
         # Set which models would be trained
         models_arr = models.split(',')
-        self.enable_svm = False
+        self.enable_svm_linear = False
+        self.enable_svm_rbf = False
         self.enable_rf = False
         self.enable_dnn = False
         self.enable_lr = False
 
         for model in models_arr:
-            if model == 'svm':
-                self.enable_svm = True
+            if model == 'svm_linear':
+                self.enable_svm_linear = True
+            if model == 'svm_rbf':
+                self.enable_svm_rbf = True
             if model == 'rf':
                 self.enable_rf = True
             if model == 'dnn':
@@ -88,7 +91,7 @@ class ModelManager:
             #           SVM with rbf            #
             #                                   #
             #####################################
-            if self.enable_svm:
+            if self.enable_svm_rbf:
                 ar_detector = ARDetectorBySVMWithRBF(results_directory,
                                                      feature_selection,
                                                      target_drugs[i],
@@ -114,7 +117,7 @@ class ModelManager:
             #         SVM with linear           #
             #                                   #
             #####################################
-            if self.enable_svm:
+            if self.enable_svm_linear:
                 ar_detector = ARDetectorBySVMWithLinear(results_directory,
                                                         feature_selection,
                                                         target_drugs[i],
