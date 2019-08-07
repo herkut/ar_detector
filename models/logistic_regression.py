@@ -89,7 +89,7 @@ class ARDetectorByLogisticRegression:
             sensitivity = float(cm[0][0]) / np.sum(cm[0])
             specificity = float(cm[1][1]) / np.sum(cm[1])
             print('For ' + self._antibiotic_name)
-            print(collections.Counter(self._y_te))
+            print(collections.Counter(y_te))
             print('Sensitivity: ' + str(sensitivity))
             print('Specificity: ' + str(specificity))
         else:
