@@ -16,10 +16,6 @@ from utils.numpy_encoder import NumpyEncoder
 
 class ARDetectorBySVMWithRBF:
     def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
-        self._x_tr = None
-        self._y_tr = None
-        self._x_te = None
-        self._y_te = None
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = label_tags
@@ -38,28 +34,14 @@ class ARDetectorBySVMWithRBF:
         else:
             self._model = svm.SVC(kernel='rbf', C=c, gamma=gamma, class_weight=class_weights)
 
-    def initialize_train_dataset(self, x_tr, y_tr):
-        self._x_tr = x_tr
-        self._y_tr = y_tr
-
-    def initialize_test_dataset(self, x_te, y_te):
-        self._x_te = x_te
-        self._y_te = y_te
-
-    def initialize_datasets(self, x_tr, y_tr, x_te, y_te):
-        self._x_tr = x_tr
-        self._y_tr = y_tr
-        self._x_te = x_te
-        self._y_te = y_te
-
     def load_model(self):
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_model_for_' + self._antibiotic_name + '.sav')
 
-    def tune_hyperparameters(self, param_grid):
+    def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
 
         grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=-1)
-        grid.fit(self._x_tr, self._y_tr)
+        grid.fit(x_tr, y_tr)
 
         print(grid)
 
@@ -93,16 +75,16 @@ class ARDetectorBySVMWithRBF:
     def predict_ar(self, x):
         self._best_model.predict(x)
 
-    def train_model(self):
-        self._model.fit(self._x_tr, self._y_tr)
-        y_pred = self._model.predict(self._x_te)
-        print(confusion_matrix(self._y_te, y_pred))
-        print(classification_report(self._y_te, y_pred))
+    def train_model(self, x_tr, y_tr):
+        self._model.fit(x_tr, y_tr)
 
-    def test_model(self):
-        y_pred = self._best_model.predict(self._x_te)
+    def test_model_for_5x2cv_f_paired_test(self, x_te, y_te):
+        pass
 
-        cm = confusion_matrix(self._y_te, y_pred)
+    def test_model(self, x_te, y_te):
+        y_pred = self._best_model.predict(x_te)
+
+        cm = confusion_matrix(y_te, y_pred)
         if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2 :
             sensitivity = float(cm[0][0]) / np.sum(cm[0])
             specificity = float(cm[1][1]) / np.sum(cm[1])
@@ -114,18 +96,18 @@ class ARDetectorBySVMWithRBF:
             print('For ' + self._antibiotic_name)
             print('There has been an error in calculating sensitivity and specificity')
 
-        plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
+        plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
         if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):
             os.makedirs(self._target_base_directory + 'confusion_matrices/' + self._target_directory)
 
         plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/normalized_svm_with_rbf_' + self._antibiotic_name + '.png')
 
-        plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
+        plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
         plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_with_rbf_' + self._antibiotic_name + '.png')
 
-        y_true = pd.Series(self._y_te, name="Actual")
+        y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
         df_confusion.to_csv(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_rbf_' + self._antibiotic_name + '.csv')
@@ -133,10 +115,6 @@ class ARDetectorBySVMWithRBF:
 
 class ARDetectorBySVMWithLinear:
     def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
-        self._x_tr = None
-        self._y_tr = None
-        self._x_te = None
-        self._y_te = None
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = label_tags
@@ -155,28 +133,14 @@ class ARDetectorBySVMWithLinear:
         else:
             self._model = svm.SVC(kernel='linear', C=c, class_weight=class_weights)
 
-    def initialize_train_dataset(self, x_tr, y_tr):
-        self._x_tr = x_tr
-        self._y_tr = y_tr
-
-    def initialize_test_dataset(self, x_te, y_te):
-        self._x_te = x_te
-        self._y_te = y_te
-
-    def initialize_datasets(self, x_tr, y_tr, x_te, y_te):
-        self._x_tr = x_tr
-        self._y_tr = y_tr
-        self._x_te = x_te
-        self._y_te = y_te
-
     def load_model(self):
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_linear_model_for_' + self._antibiotic_name + '.sav')
 
-    def tune_hyperparameters(self, param_grid):
+    def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
 
         grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=-1)
-        grid.fit(self._x_tr, self._y_tr)
+        grid.fit(x_tr, y_tr)
 
         print(grid)
 
@@ -209,14 +173,11 @@ class ARDetectorBySVMWithLinear:
     def predict_ar(self, x):
         self._best_model.predict(x)
 
-    def train_model(self):
-        self._model.fit(self._x_tr, self._y_tr)
-        y_pred = self._model.predict(self._x_te)
-        print(confusion_matrix(self._y_te, y_pred))
-        print(classification_report(self._y_te, y_pred))
+    def train_model(self, x_tr, y_tr):
+        self._model.fit(x_tr, y_tr)
 
-    def test_model(self):
-        y_pred = self._best_model.predict(self._x_te)
+    def test_model(self, x_te, y_te):
+        y_pred = self._best_model.predict(x_te)
 
         cm = confusion_matrix(self._y_te, y_pred)
         if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
@@ -230,18 +191,18 @@ class ARDetectorBySVMWithLinear:
             print('For ' + self._antibiotic_name)
             print('There has been an error in calculating sensitivity and specificity')
 
-        plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
+        plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
         if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):
             os.makedirs(self._target_base_directory + 'confusion_matrices/' + self._target_directory)
 
         plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/normalized_svm_with_linear_' + self._antibiotic_name + '.png')
 
-        plot_confusion_matrix(self._y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
+        plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
         plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_with_linear_' + self._antibiotic_name + '.png')
 
-        y_true = pd.Series(self._y_te, name="Actual")
+        y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
         df_confusion.to_csv(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_linear_' + self._antibiotic_name + '.csv')

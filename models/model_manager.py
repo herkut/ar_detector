@@ -27,7 +27,6 @@ class ModelManager:
         self.enable_svm_linear = False
         self.enable_svm_rbf = False
         self.enable_rf = False
-        self.enable_dnn = False
         self.enable_lr = False
 
         for model in models_arr:
@@ -37,8 +36,6 @@ class ModelManager:
                 self.enable_svm_rbf = True
             if model == 'rf':
                 self.enable_rf = True
-            if model == 'dnn':
-                self.enable_dnn = True
             if model == 'lr':
                 self.enable_lr = True
 
@@ -168,23 +165,6 @@ class ModelManager:
 
             #####################################
             #                                   #
-            #        Deep Neural Network        #
-            #                                   #
-            #####################################
-            if self.enable_dnn:
-                ar_detector = ArDetectorByDNN(results_directory,
-                                              feature_selection,
-                                              target_drugs[i],
-                                              np.shape(x_train)[1],
-                                              label_tags=label_tags
-                                              )
-
-                self.train_dnn(ar_detector, x_train, y_train)
-
-                self.test_dnn(ar_detector, x_test, y_test)
-
-            #####################################
-            #                                   #
             #        Logistic Regression        #
             #                                   #
             #####################################
@@ -233,9 +213,7 @@ class ModelManager:
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
         #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_train_dataset(x_tr, y_tr)
-
-        ar_detector.tune_hyperparameters(param_grid)
+        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
 
@@ -249,9 +227,7 @@ class ModelManager:
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
         #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_train_dataset(x_tr, y_tr)
-
-        ar_detector.tune_hyperparameters(param_grid)
+        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
 
@@ -274,9 +250,7 @@ class ModelManager:
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
         #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_train_dataset(x_tr, y_tr)
-
-        ar_detector.tune_hyperparameters(param_grid)
+        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
 
@@ -294,60 +268,30 @@ class ModelManager:
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
         #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_train_dataset(x_tr, y_tr)
-
-        ar_detector.tune_hyperparameters(param_grid)
+        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
-
-    def train_dnn(self, ar_detector, x_tr, y_tr):
-        # Optimizers to be tried are selected according to Karpathy's following blog page: https://medium.com/@karpathy/a-peek-at-trends-in-machine-learning-ab8a1085a106
-        # hidden units and activation functions elements must be the same sized because they would create a hidden layer together
-        param_grid = dict(hidden_units=[[128], [1024], [4096]],
-                          activation_functions=[['relu'], ['tanh']],
-                          epochs=[100],
-                          batch_size=[50, 100],
-                          optimizer=['RMSprop', 'Adam', 'Adagrad', 'Adadelta'],
-                          dropout_rate=[0.0, 0.25, 0.5],
-                          batch_normalization_required=[True])
-
-        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
-        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-
-        ar_detector.initialize_train_dataset(x_tr, y_tr)
-        ar_detector.tune_hyperparameters(param_grid)
 
     def test_svm_with_rbf(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
-        ar_detector.test_model()
+        ar_detector.test_model(x_te, y_te)
 
     def test_svm_with_linear(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
-        ar_detector.test_model()
+        ar_detector.test_model(x_te, y_te)
 
     def test_random_forest(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
-        ar_detector.test_model()
-
-    def test_dnn(self, ar_detector, x_te, y_te):
-        print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
-
-        ar_detector.initialize_test_dataset(x_te, y_te)
-        ar_detector.load_model()
-        ar_detector.test_model()
+        ar_detector.test_model(x_te, y_te)
 
     def test_logistic_regression(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
-        ar_detector.initialize_test_dataset(x_te, y_te)
         ar_detector.load_model()
-        ar_detector.test_model()
+        ar_detector.test_model(x_te, y_te)
