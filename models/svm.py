@@ -185,7 +185,7 @@ class ARDetectorBySVMWithLinear:
     def test_model(self, x_te, y_te):
         y_pred = self._best_model.predict(x_te)
 
-        cm = confusion_matrix(self._y_te, y_pred)
+        cm = confusion_matrix(y_te, y_pred)
         if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
             sensitivity = float(cm[0][0]) / np.sum(cm[0])
             specificity = float(cm[1][1]) / np.sum(cm[1])
