@@ -1,16 +1,18 @@
+import json
 import numpy as np
-
 
 ######################################################################
 from models.logistic_regression import ARDetectorByLogisticRegression
 from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
 from preprocess.data_representation_preparer import DataRepresentationPreparer
+from utils.confusion_matrix_drawer import classification_report
 
 target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 label_tags = 'phenotype'
 TRADITIONAL_ML_SCORING = 'accuracy'
 ######################################################################
+
 
 class ExperimentExecutor:
     def __init__(self, models, data_representation='binary'):
@@ -20,7 +22,6 @@ class ExperimentExecutor:
         self.enable_svm_linear = False
         self.enable_svm_rbf = False
         self.enable_rf = False
-        self.enable_dnn = False
         self.enable_lr = False
 
         for model in models_arr:
@@ -30,12 +31,10 @@ class ExperimentExecutor:
                 self.enable_svm_rbf = True
             if model == 'rf':
                 self.enable_rf = True
-            if model == 'dnn':
-                self.enable_dnn = True
             if model == 'lr':
                 self.enable_lr = True
 
-    def conduct_all_experiments(self, results_directory, feature_selection):
+    def conduct_all_experiments(self, results_directory, feature_selection, data_representation):
         #####################################
         #                                   #
         #           SVM with rbf            #
@@ -46,7 +45,7 @@ class ExperimentExecutor:
                                                  feature_selection,
                                                  label_tags=label_tags,
                                                  scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _)
+            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
         #####################################
         #                                   #
         #         SVM with linear           #
@@ -57,7 +56,7 @@ class ExperimentExecutor:
                                                     feature_selection,
                                                     label_tags=label_tags,
                                                     scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _)
+            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
 
         #####################################
         #                                   #
@@ -69,7 +68,7 @@ class ExperimentExecutor:
                                                    feature_selection,
                                                    label_tags=label_tags,
                                                    scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _)
+            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
 
         #####################################
         #                                   #
@@ -81,119 +80,112 @@ class ExperimentExecutor:
                                                          feature_selection,
                                                          label_tags=label_tags,
                                                          scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _)
+            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
 
-    def conduct_5x2cv_for_model(self, ar_detector, raw_feature_matrix, raw_labels):
-        features_base_directory = '/run/media/herkut/herkut/TB_genomes/features/features'
+    def conduct_data_preprocessing(self, raw_feature_matrix, raw_labels, data_representation):
+        x, y = self.filter_out_nan(raw_feature_matrix, raw_labels)
 
-        # models = {'svm_linear': 'path_to_best_json',
-        #            'svm_rbf': 'path_to_best_json',
-        #            'lr': 'path_to_best_json',
-        #            'rf':'path_to_best_json'}
+        # Random state is used to make train and test split the same on each iteration
+        if data_representation == 'tfidf':
+            x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
+        elif data_representation == 'tfrf':
+            x = DataRepresentationPreparer.update_feature_matrix_with_tf_rf(x, y)
+        elif data_representation == 'bm25tfidf':
+            x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_idf(x)
+        elif data_representation == 'bm25tfrf':
+            x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_rf(x, y)
+        else:
+            # Assumed binary data representation would be used
+            pass
 
-        for i in range(0, 5):
-            ########################################
-            #                                      #
-            # Train on split 1 and test on split 2 #
-            #                                      #
-            ########################################
-            for j in range(len(target_drugs)):
-                x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
+        return x, y
 
-            tr_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split1.csv',
-                                       delimiter=' ',
-                                       dtype=np.int32)
+    def conduct_5x2cv_for_model(self, ar_detector, model, raw_feature_matrix, raw_labels, data_representation=None):
+        # model may be svm_linear, svm_rbf, rf, lr as string
+        features_base_directory = '/run/media/herkut/herkut/TB_genomes/features/features/'
+        results = {}
 
-            te_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split2.csv',
-                                       delimiter=' ',
-                                       dtype=np.int32)
+        for j in range(len(target_drugs)):
+            results[target_drugs[j]] = []
+            for i in range(0, 5):
+                # Data preprocessing
+                iteration_results = []
+                x, y = self.conduct_data_preprocessing(raw_feature_matrix, raw_labels[target_drugs[i]], data_representation)
 
-            # Random state is used to make train and test split the same on each iteration
-            if self.data_representation == 'tfidf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
-            elif self.data_representation == 'tfrf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_tf_rf(x, y)
-            elif self.data_representation == 'bm25tfidf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_idf(x)
-            elif self.data_representation == 'bm25tfrf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_rf(x, y)
-            else:
-                # Assumed binary data representation would be used
-                pass
+                x_mat = x.values
+                y_mat = y.values
 
-            # Update weights of features if necessary
-            x_train = x.loc[tr_indexes].values
-            y_train = y.loc[tr_indexes].values
-            x_test = x.loc[te_indexes].values
-            y_test = y.loc[te_indexes].values
+                class_weights_arr = {}
 
-            x = x.values
-            y = y.values
+                unique, counts = np.unique(y_mat, return_counts=True)
 
-            class_weights_arr = {}
+                class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
-            unique, counts = np.unique(y, return_counts=True)
+                ar_detector.set_antibiotic_name(target_drugs[j])
 
-            class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+                # load best parameters and reinitialize the model with these parameters
+                with open('/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/' + model + '_' + target_drugs[j] + '.json') as json_data:
+                    parameters = json.load(json_data)
 
-            ar_detector.set_antibiotic_name(target_drugs[j])
+                ########################################
+                #                                      #
+                # Train on split 1 and test on split 2 #
+                #                                      #
+                ########################################
+                tr_indexes = np.genfromtxt(features_base_directory + '5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split1.csv',
+                                           delimiter=' ',
+                                           dtype=np.int32)
 
-            # TODO load best parameters and reinitialize the model with these parameters
-            ar_detector.reinitialize_model_with_parameters()
+                te_indexes = np.genfromtxt(features_base_directory + '5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split2.csv',
+                                           delimiter=' ',
+                                           dtype=np.int32)
 
-            ar_detector.train(x_train, x_test)
+                # Update weights of features if necessary
+                x_train = x.loc[tr_indexes].values
+                y_train = y.loc[tr_indexes].values
+                x_test = x.loc[te_indexes].values
+                y_test = y.loc[te_indexes].values
 
-            # TODO create test function for 5x2cv paired f test
+                ar_detector.reinitialize_model_with_parameters(parameters, class_weights=class_weights)
 
-            ########################################
-            #                                      #
-            # Train on split 2 and test on split 1 #
-            #                                      #
-            ########################################
-            for j in range(len(target_drugs)):
-                x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
+                ar_detector.train(x_train, y_train)
 
-            tr_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split2.csv',
-                                       delimiter=' ',
-                                       dtype=np.int32)
+                y_pred = ar_detector.predict(x_test)
 
-            te_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split1.csv',
-                                       delimiter=' ',
-                                       dtype=np.int32)
+                iteration_results.append(classification_report(y_test, y_pred))
 
-            # Random state is used to make train and test split the same on each iteration
-            if self.data_representation == 'tfidf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
-            elif self.data_representation == 'tfrf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_tf_rf(x, y)
-            elif self.data_representation == 'bm25tfidf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_idf(x)
-            elif self.data_representation == 'bm25tfrf':
-                x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_rf(x, y)
-            else:
-                # Assumed binary data representation would be used
-                pass
+                ########################################
+                #                                      #
+                # Train on split 2 and test on split 1 #
+                #                                      #
+                ########################################
+                tr_indexes = np.genfromtxt(features_base_directory + '5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split2.csv',
+                                           delimiter=' ',
+                                           dtype=np.int32)
 
-            # Update weights of features if necessary
-            x_train = x.loc[tr_indexes].values
-            y_train = y.loc[tr_indexes].values
-            x_test = x.loc[te_indexes].values
-            y_test = y.loc[te_indexes].values
+                te_indexes = np.genfromtxt(features_base_directory + '5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split1.csv',
+                                           delimiter=' ',
+                                           dtype=np.int32)
 
-            x = x.values
-            y = y.values
+                # Update weights of features if necessary
+                x_train = x.loc[tr_indexes].values
+                y_train = y.loc[tr_indexes].values
+                x_test = x.loc[te_indexes].values
+                y_test = y.loc[te_indexes].values
 
-            class_weights_arr = {}
+                # load best parameters and reinitialize the model with these parameters
+                with open('/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/' + model + '_' + target_drugs[j] + '.json') as json_data:
+                    parameters = json.load(json_data)
 
-            unique, counts = np.unique(y, return_counts=True)
+                ar_detector.reinitialize_model_with_parameters(parameters, class_weights=class_weights)
 
-            class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+                ar_detector.train(x_train, y_train)
 
-            ar_detector.set_antibiotic_name(target_drugs[j])
+                y_pred = ar_detector.predict(x_test)
 
-            # TODO load best parameters and reinitialize the model with these parameters
-            ar_detector.reinitialize_model_with_parameters()
+                classification_report(y_test, y_pred)
 
-            ar_detector.train(x_train, x_test)
+                iteration_results.append(classification_report(y_test, y_pred))
 
-            # TODO create test function for 5x2cv paired f test
+             results[target_drugs[j]].append(iteration_results)
+        # TODO print results dictionary as json into a file to conduct statistical tests for models later
