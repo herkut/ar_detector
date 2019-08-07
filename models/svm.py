@@ -15,7 +15,7 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorBySVMWithRBF:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = label_tags
@@ -28,11 +28,14 @@ class ARDetectorBySVMWithRBF:
         self._scoring = scoring
         self._target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
-    def reinitialize_model_with_parameters(self, c, gamma, class_weights=None):
+    def set_antibiotic_name(self, antibiotic_name):
+        self._antibiotic_name = antibiotic_name
+
+    def reinitialize_model_with_parameters(self, parameters, class_weights=None):
         if class_weights is None:
-            self._model = svm.SVC(kernel='rbf', C=c, gamma=gamma)
+            self._model = svm.SVC(kernel='rbf', C=parameters['C'], gamma=parameters['gamma'])
         else:
-            self._model = svm.SVC(kernel='rbf', C=c, gamma=gamma, class_weight=class_weights)
+            self._model = svm.SVC(kernel='rbf', C=parameters['C'], gamma=parameters['gamma'], class_weight=class_weights)
 
     def load_model(self):
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_model_for_' + self._antibiotic_name + '.sav')
@@ -114,7 +117,7 @@ class ARDetectorBySVMWithRBF:
 
 
 class ARDetectorBySVMWithLinear:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = label_tags
@@ -127,11 +130,14 @@ class ARDetectorBySVMWithLinear:
         self._scoring = scoring
         self._target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
-    def reinitialize_model_with_parameters(self, c, class_weights=None):
+    def set_antibiotic_name(self, antibiotic_name):
+        self._antibiotic_name = antibiotic_name
+
+    def reinitialize_model_with_parameters(self, parameters, class_weights=None):
         if class_weights is None:
-            self._model = svm.SVC(kernel='linear', C=c)
+            self._model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'])
         else:
-            self._model = svm.SVC(kernel='linear', C=c, class_weight=class_weights)
+            self._model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'], class_weight=class_weights)
 
     def load_model(self):
         self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_linear_model_for_' + self._antibiotic_name + '.sav')

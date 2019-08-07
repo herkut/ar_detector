@@ -15,7 +15,7 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorByLogisticRegression:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._antibiotic_name = antibiotic_name
@@ -30,11 +30,14 @@ class ARDetectorByLogisticRegression:
         self._best_model = None
         self._target_directory = 'lr_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
-    def reinitialize_model_with_parameters(self, c, penalty, solver, class_weights=None):
+    def set_antibiotic_name(self, antibiotic_name):
+        self._antibiotic_name = antibiotic_name
+
+    def reinitialize_model_with_parameters(self, parameters, c, penalty, solver, class_weights=None):
         if class_weights is None:
-            self._model = LogisticRegression(C=c, penalty=penalty, solver=solver)
+            self._model = LogisticRegression(C=parameters['C'], penalty=parameters['penalty'], solver=parameters['solver'])
         else:
-            self._model = LogisticRegression(C=c, penalty=penalty, solver=solver, class_weight=class_weights)
+            self._model = LogisticRegression(C=parameters['C'], penalty=parameters['penalty'], solver=parameters['solver'], class_weight=class_weights)
 
     def load_model(self):
         # load the model from disk

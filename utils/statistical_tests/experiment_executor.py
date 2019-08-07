@@ -44,10 +44,8 @@ class ExperimentExecutor:
         if self.enable_svm_rbf:
             ar_detector = ARDetectorBySVMWithRBF(results_directory,
                                                  feature_selection,
-                                                 target_drugs[i],
                                                  label_tags=label_tags,
-                                                 scoring=TRADITIONAL_ML_SCORING,
-                                                 class_weights=class_weights)
+                                                 scoring=TRADITIONAL_ML_SCORING)
             self.conduct_5x2cv_for_model(ar_detector, _, _)
         #####################################
         #                                   #
@@ -57,10 +55,8 @@ class ExperimentExecutor:
         if self.enable_svm_linear:
             ar_detector = ARDetectorBySVMWithLinear(results_directory,
                                                     feature_selection,
-                                                    target_drugs[i],
                                                     label_tags=label_tags,
-                                                    scoring=TRADITIONAL_ML_SCORING,
-                                                    class_weights=class_weights)
+                                                    scoring=TRADITIONAL_ML_SCORING)
             self.conduct_5x2cv_for_model(ar_detector, _, _)
 
         #####################################
@@ -71,10 +67,8 @@ class ExperimentExecutor:
         if self.enable_rf:
             ar_detector = ARDetectorByRandomForest(results_directory,
                                                    feature_selection,
-                                                   target_drugs[i],
                                                    label_tags=label_tags,
-                                                   scoring=TRADITIONAL_ML_SCORING,
-                                                   class_weights=class_weights)
+                                                   scoring=TRADITIONAL_ML_SCORING)
             self.conduct_5x2cv_for_model(ar_detector, _, _)
 
         #####################################
@@ -85,10 +79,8 @@ class ExperimentExecutor:
         if self.enable_lr:
             ar_detector = ARDetectorByLogisticRegression(results_directory,
                                                          feature_selection,
-                                                         target_drugs[i],
                                                          label_tags=label_tags,
-                                                         scoring=TRADITIONAL_ML_SCORING,
-                                                         class_weights=class_weights)
+                                                         scoring=TRADITIONAL_ML_SCORING)
             self.conduct_5x2cv_for_model(ar_detector, _, _)
 
     def conduct_5x2cv_for_model(self, ar_detector, raw_feature_matrix, raw_labels):
@@ -108,11 +100,11 @@ class ExperimentExecutor:
             for j in range(len(target_drugs)):
                 x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
 
-            tr_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(j + 1) + '/' + target_drugs[j] + '_split1.csv',
+            tr_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split1.csv',
                                        delimiter=' ',
                                        dtype=np.int32)
 
-            te_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(j + 1) + '/' + target_drugs[j] + '_split2.csv',
+            te_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split2.csv',
                                        delimiter=' ',
                                        dtype=np.int32)
 
@@ -144,7 +136,14 @@ class ExperimentExecutor:
 
             class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
-            ar_detector.train()
+            ar_detector.set_antibiotic_name(target_drugs[j])
+
+            # TODO load best parameters and reinitialize the model with these parameters
+            ar_detector.reinitialize_model_with_parameters()
+
+            ar_detector.train(x_train, x_test)
+
+            # TODO create test function for 5x2cv paired f test
 
             ########################################
             #                                      #
@@ -154,11 +153,11 @@ class ExperimentExecutor:
             for j in range(len(target_drugs)):
                 x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
 
-            tr_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(j + 1) + '/' + target_drugs[j] + '_split2.csv',
+            tr_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split2.csv',
                                        delimiter=' ',
                                        dtype=np.int32)
 
-            te_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(j + 1) + '/' + target_drugs[j] + '_split1.csv',
+            te_indexes = np.genfromtxt('/run/media/herkut/herkut/TB_genomes/features/features/5xcv2_f_test_' + str(i + 1) + '/' + target_drugs[j] + '_split1.csv',
                                        delimiter=' ',
                                        dtype=np.int32)
 
@@ -190,4 +189,11 @@ class ExperimentExecutor:
 
             class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
+            ar_detector.set_antibiotic_name(target_drugs[j])
 
+            # TODO load best parameters and reinitialize the model with these parameters
+            ar_detector.reinitialize_model_with_parameters()
+
+            ar_detector.train(x_train, x_test)
+
+            # TODO create test function for 5x2cv paired f test

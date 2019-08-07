@@ -13,7 +13,7 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorByRandomForest:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name, label_tags='phenotype', scoring='roc_auc', class_weights=None):
+    def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
         self._target_base_directory = target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = label_tags
@@ -28,7 +28,10 @@ class ARDetectorByRandomForest:
         self._scoring = scoring
         self._target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
-    def reinitialize_model_with_parameters(self, n_estimators, max_features, bootstrap=None, max_depth=None, class_weights=None):
+    def set_antibiotic_name(self, antibiotic_name):
+        self._antibiotic_name = antibiotic_name
+
+    def reinitialize_model_with_parameters(self, parameters, n_estimators, max_features, bootstrap=None, max_depth=None, class_weights=None):
         if class_weights is None:
             if bootstrap is not None and max_depth is not None:
                 self._model = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, bootstrap=bootstrap, max_depth=max_depth)
