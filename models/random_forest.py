@@ -124,6 +124,9 @@ class ARDetectorByRandomForest:
     def predict_ar(self, x):
         self._best_model.predict(x)
 
+    def predict(self, x):
+        return self._model.predict(x)
+
     def train_model(self, x_tr, y_tr):
         self._model.fit(x_tr, y_tr)
 

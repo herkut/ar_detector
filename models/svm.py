@@ -5,7 +5,7 @@ import os
 import numpy as np
 from sklearn import svm
 from sklearn.externals import joblib
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -78,11 +78,11 @@ class ARDetectorBySVMWithRBF:
     def predict_ar(self, x):
         self._best_model.predict(x)
 
+    def predict(self, x):
+        return self._model.predict(x)
+
     def train_model(self, x_tr, y_tr):
         self._model.fit(x_tr, y_tr)
-
-    def test_model_for_5x2cv_f_paired_test(self, x_te, y_te):
-        pass
 
     def test_model(self, x_te, y_te):
         y_pred = self._best_model.predict(x_te)
@@ -178,6 +178,9 @@ class ARDetectorBySVMWithLinear:
 
     def predict_ar(self, x):
         self._best_model.predict(x)
+
+    def predict(self, x):
+        return self._model.predict(x)
 
     def train_model(self, x_tr, y_tr):
         self._model.fit(x_tr, y_tr)
