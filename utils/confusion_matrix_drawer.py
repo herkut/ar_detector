@@ -3,6 +3,37 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def classification_report(y_true, y_pred):
+    results = {}
+
+    TP = 0
+    FP = 0
+    TN = 0
+    FN = 0
+
+    for i in range(len(y_pred)):
+        if y_true[i] == y_pred[i] == 1:
+            TP += 1
+        if y_pred[i] == 1 and y_true[i] != y_pred[i]:
+            FP += 1
+        if y_true[i] == y_pred[i] == 0:
+            TN += 1
+        if y_pred[i] == 0 and y_true[i] != y_pred[i]:
+            FN += 1
+
+    results['TP'] = TP
+    results['FP'] = FP
+    results['TN'] = TN
+    results['FN'] = FN
+    results['sensitivity/recall'] = TP / (TP + FN)
+    results['specificity'] = TN / (TN + FP)
+    results['precision'] = TP / (TP + FP)
+    results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
+    results['f1'] = 2 * TP / (2 * TP + FP + FN)
+
+    return results
+
+
 def plot_confusion_matrix(y_true, y_pred, classes,
                           normalize=False,
                           title=None,
