@@ -33,7 +33,7 @@ class ARDetectorByLogisticRegression:
     def set_antibiotic_name(self, antibiotic_name):
         self._antibiotic_name = antibiotic_name
 
-    def reinitialize_model_with_parameters(self, parameters, c, penalty, solver, class_weights=None):
+    def reinitialize_model_with_parameters(self, parameters, class_weights=None):
         if class_weights is None:
             self._model = LogisticRegression(C=parameters['C'], penalty=parameters['penalty'], solver=parameters['solver'])
         else:

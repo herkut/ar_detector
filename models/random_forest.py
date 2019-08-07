@@ -35,7 +35,7 @@ class ARDetectorByRandomForest:
     def set_antibiotic_name(self, antibiotic_name):
         self._antibiotic_name = antibiotic_name
 
-    def reinitialize_model_with_parameters(self, parameters, n_estimators, max_features, bootstrap=None, max_depth=None, class_weights=None):
+    def reinitialize_model_with_parameters(self, parameters, class_weights=None):
         if class_weights is None:
             if ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)) \
                     and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
