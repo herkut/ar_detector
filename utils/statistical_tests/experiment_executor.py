@@ -7,10 +7,13 @@ from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
 from preprocess.data_representation_preparer import DataRepresentationPreparer
 from utils.confusion_matrix_drawer import classification_report
+from utils.numpy_encoder import NumpyEncoder
 
 target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 label_tags = 'phenotype'
 TRADITIONAL_ML_SCORING = 'accuracy'
+directory_containing_best_model_informations = '/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/'
+results_directory_5x2cv_paired_f_test = '/run/media/herkut/herkut/TB_genomes/ar_detector_results/5x2cv_f_tests/'
 ######################################################################
 
 
@@ -34,7 +37,7 @@ class ExperimentExecutor:
             if model == 'lr':
                 self.enable_lr = True
 
-    def conduct_all_experiments(self, results_directory, feature_selection, data_representation):
+    def conduct_all_experiments(self, results_directory, feature_selection, data_representation, raw_feature_matrix, raw_labels):
         #####################################
         #                                   #
         #           SVM with rbf            #
@@ -45,7 +48,7 @@ class ExperimentExecutor:
                                                  feature_selection,
                                                  label_tags=label_tags,
                                                  scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
+            self.conduct_5x2cv_for_model(ar_detector, 'svm_rbf', raw_feature_matrix, raw_labels, data_representation=data_representation)
         #####################################
         #                                   #
         #         SVM with linear           #
@@ -56,7 +59,7 @@ class ExperimentExecutor:
                                                     feature_selection,
                                                     label_tags=label_tags,
                                                     scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
+            self.conduct_5x2cv_for_model(ar_detector, 'svm_linear', raw_feature_matrix, raw_labels, data_representation=data_representation)
 
         #####################################
         #                                   #
@@ -68,7 +71,7 @@ class ExperimentExecutor:
                                                    feature_selection,
                                                    label_tags=label_tags,
                                                    scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
+            self.conduct_5x2cv_for_model(ar_detector, 'rf', raw_feature_matrix, raw_labels, data_representation=data_representation)
 
         #####################################
         #                                   #
@@ -80,7 +83,7 @@ class ExperimentExecutor:
                                                          feature_selection,
                                                          label_tags=label_tags,
                                                          scoring=TRADITIONAL_ML_SCORING)
-            self.conduct_5x2cv_for_model(ar_detector, _, _, data_representation=data_representation)
+            self.conduct_5x2cv_for_model(ar_detector, 'lr', raw_feature_matrix, raw_labels, data_representation=data_representation)
 
     def conduct_data_preprocessing(self, raw_feature_matrix, raw_labels, data_representation):
         x, y = self.filter_out_nan(raw_feature_matrix, raw_labels)
@@ -124,7 +127,7 @@ class ExperimentExecutor:
                 ar_detector.set_antibiotic_name(target_drugs[j])
 
                 # load best parameters and reinitialize the model with these parameters
-                with open('/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/' + model + '_' + target_drugs[j] + '.json') as json_data:
+                with open('/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/' + ar_detector._target_directory + model + '_' + target_drugs[j] + '.json') as json_data:
                     parameters = json.load(json_data)
 
                 ########################################
@@ -174,7 +177,7 @@ class ExperimentExecutor:
                 y_test = y.loc[te_indexes].values
 
                 # load best parameters and reinitialize the model with these parameters
-                with open('/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/' + model + '_' + target_drugs[j] + '.json') as json_data:
+                with open('/run/media/herkut/herkut/TB_genomes/ar_detector_results/best_models/' + ar_detector._target_directory + model + '_' + target_drugs[j] + '.json') as json_data:
                     parameters = json.load(json_data)
 
                 ar_detector.reinitialize_model_with_parameters(parameters, class_weights=class_weights)
@@ -187,5 +190,7 @@ class ExperimentExecutor:
 
                 iteration_results.append(classification_report(y_test, y_pred))
 
-             results[target_drugs[j]].append(iteration_results)
+            results[target_drugs[j]].append(iteration_results)
         # TODO print results dictionary as json into a file to conduct statistical tests for models later
+        with open(results_directory_5x2cv_paired_f_test + target_drugs[j] + '/' + model + '.json', 'w') as f:
+            f.write(json.dumps(results, cls=NumpyEncoder))
