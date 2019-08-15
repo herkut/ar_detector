@@ -91,10 +91,8 @@ class ExperimentExecutor:
 
     def conduct_5x2cv_for_model(self, ar_detector, model, raw_feature_matrix, raw_labels, data_representation=None):
         # model may be svm_linear, svm_rbf, rf, lr as string
-        results = {}
-
         for j in range(len(target_drugs)):
-            results[target_drugs[j]] = []
+            results = []
             for i in range(0, 5):
                 # Data preprocessing
                 iteration_results = []
@@ -175,10 +173,10 @@ class ExperimentExecutor:
 
                 iteration_results.append(classification_report(y_test, y_pred))
 
-                results[target_drugs[j]].append(iteration_results)
+                results.append(iteration_results)
 
             if not os.path.exists(results_directory_5x2cv_paired_f_test + target_drugs[j]):
                 os.makedirs(results_directory_5x2cv_paired_f_test + target_drugs[j])
 
-            with open(results_directory_5x2cv_paired_f_test + target_drugs[j] + '/' + model + '.json', 'w') as f:
+            with open(results_directory_5x2cv_paired_f_test + target_drugs[j] + '/' + model + '_' + data_representation + '.json', 'w') as f:
                 f.write(json.dumps(results, cls=NumpyEncoder))

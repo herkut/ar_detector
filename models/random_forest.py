@@ -102,7 +102,7 @@ class ARDetectorByRandomForest:
         if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
             os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
 
-        with open(self._target_base_directory + 'best_models/' + self._target_directory + '/random_forest_' + self._antibiotic_name + '.json','w') as f:
+        with open(self._target_base_directory + 'best_models/' + self._target_directory + '/rf' + self._antibiotic_name + '.json','w') as f:
             f.write(json.dumps(grid.best_params_, cls=NumpyEncoder))
 
         print('Summary of the model:')
