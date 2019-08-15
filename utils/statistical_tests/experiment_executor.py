@@ -7,6 +7,7 @@ from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
 from preprocess.data_representation_preparer import DataRepresentationPreparer
 from utils.confusion_matrix_drawer import classification_report
+from utils.helper_functions import conduct_data_preprocessing
 from utils.numpy_encoder import NumpyEncoder
 
 target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
@@ -85,24 +86,6 @@ class ExperimentExecutor:
                                                          scoring=TRADITIONAL_ML_SCORING)
             self.conduct_5x2cv_for_model(ar_detector, 'lr', raw_feature_matrix, raw_labels, data_representation=data_representation)
 
-    def conduct_data_preprocessing(self, raw_feature_matrix, raw_labels, data_representation):
-        x, y = self.filter_out_nan(raw_feature_matrix, raw_labels)
-
-        # Random state is used to make train and test split the same on each iteration
-        if data_representation == 'tfidf':
-            x = DataRepresentationPreparer.update_feature_matrix_with_tf_idf(x)
-        elif data_representation == 'tfrf':
-            x = DataRepresentationPreparer.update_feature_matrix_with_tf_rf(x, y)
-        elif data_representation == 'bm25tfidf':
-            x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_idf(x)
-        elif data_representation == 'bm25tfrf':
-            x = DataRepresentationPreparer.update_feature_matrix_with_bm25_tf_rf(x, y)
-        else:
-            # Assumed binary data representation would be used
-            pass
-
-        return x, y
-
     def conduct_5x2cv_for_model(self, ar_detector, model, raw_feature_matrix, raw_labels, data_representation=None):
         # model may be svm_linear, svm_rbf, rf, lr as string
         features_base_directory = '/run/media/herkut/herkut/TB_genomes/features/features/'
@@ -113,7 +96,7 @@ class ExperimentExecutor:
             for i in range(0, 5):
                 # Data preprocessing
                 iteration_results = []
-                x, y = self.conduct_data_preprocessing(raw_feature_matrix, raw_labels[target_drugs[i]], data_representation)
+                x, y = conduct_data_preprocessing(raw_feature_matrix, raw_labels[target_drugs[i]], data_representation)
 
                 x_mat = x.values
                 y_mat = y.values
