@@ -175,10 +175,10 @@ class ExperimentExecutor:
 
                 iteration_results.append(classification_report(y_test, y_pred))
 
-            results[target_drugs[j]].append(iteration_results)
+                results[target_drugs[j]].append(iteration_results)
 
-        if not os.path.exists(results_directory_5x2cv_paired_f_test + target_drugs[j]):
-            os.makedirs(results_directory_5x2cv_paired_f_test + target_drugs[j])
+            if not os.path.exists(results_directory_5x2cv_paired_f_test + target_drugs[j]):
+                os.makedirs(results_directory_5x2cv_paired_f_test + target_drugs[j])
 
-        with open(results_directory_5x2cv_paired_f_test + target_drugs[j] + '/' + model + '.json', 'w') as f:
-            f.write(json.dumps(results, cls=NumpyEncoder))
+            with open(results_directory_5x2cv_paired_f_test + target_drugs[j] + '/' + model + '.json', 'w') as f:
+                f.write(json.dumps(results, cls=NumpyEncoder))
