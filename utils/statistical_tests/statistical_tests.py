@@ -47,11 +47,11 @@ def compare_models_wrt_5x2cv_paired_t_test(results_model1, results_model2):
     # calculating variance estimates
 
     for i in range(0, 5):
-        p_mat[i][0] = results_model1[i]['test_accuracies'][0] - results_model2[i]['test_accuracies'][0]
-        p_mat[i][1] = results_model1[i]['test_accuracies'][1] - results_model2[i]['test_accuracies'][1]
+        p_mat[i][0] = results_model1[i][0]['accuracy'] - results_model2[i][0]['accuracy']
+        p_mat[i][1] = results_model1[i][1]['accuracy'] - results_model2[i][1]['accuracy']
         s_sq[i] = (np.square(p_mat[i][0] - np.mean(p_mat[i])) + np.square(p_mat[i][1] - np.mean(p_mat[i])))
 
-    t = p_mat[1][1] / (np.sum(s_sq) / 5)
+    t = p_mat[0][0] / np.sqrt(np.sum(s_sq) / 5)
 
     if t > stats.t.ppf(1 - 0.025, 5) or t < -stats.t.ppf(1 - 0.025, 5):
         if np.mean(p_mat) < 0:
@@ -73,21 +73,21 @@ def compare_models_wrt_5x2cv_paired_f_test(results_model1, results_model2):
     # calculating variance estimates
 
     for i in range(0, 5):
-        p_mat[i][0] = results_model1[i]['test_accuracies'][0] - results_model2[i]['test_accuracies'][0]
-        p_mat[i][1] = results_model1[i]['test_accuracies'][1] - results_model2[i]['test_accuracies'][1]
+        p_mat[i][0] = results_model1[i][0]['accuracy'] - results_model2[i][0]['accuracy']
+        p_mat[i][1] = results_model1[i][1]['accuracy'] - results_model2[i][1]['accuracy']
         s_sq[i] = (np.square(p_mat[i][0] - np.mean(p_mat[i])) + np.square(p_mat[i][1] - np.mean(p_mat[i])))
 
     f = np.sum(np.square(p_mat)) / (2 * np.sum(s_sq))
     print("f estimation: " + str(f) + ' and f value with 95 confidence interval: ' + str(stats.f.ppf(1-0.05, 10, 5)))
     if f < stats.f.ppf(1-0.05, 10, 5):
-        print('Models are not significantly different')
+        # print('Models are not significantly different')
         return 0
     else:
-        print('Models are significantly different')
+        # print('Models are significantly different')
         if np.mean(p_mat) < 0:
             # model 2 is better
             return -1
-        elif np.mean(p_mat) > 0:
+        elif np.mean(p_mat) >= 0:
             # model 1 is better
             return 1
         else:
@@ -102,4 +102,34 @@ def choose_best_models(result_json_model1, result_json_model2):
 
 if __name__ == '__main__':
     # compare_models_wrt_5x2cv_paired_f_test([],[])
-    print(stats.f.ppf(1-0.05, 10, 5))
+    # print(stats.f.ppf(1-0.05, 10, 5))
+    target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin',
+                    'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
+
+    results_5x2cv_paired_f_test = '/run/media/herkut/herkut/TB_genomes/ar_detector_results/5x2cv_f_tests/'
+
+    data_representation = 'tfrf'
+    models = ['svm_linear', 'svm_rbf', 'lr', 'rf']
+
+    for i in range(0, len(target_drugs)):
+        print('For ' + target_drugs[i] + ': ')
+        for m1 in models:
+            if data_representation != 'binary':
+                m1 = m1 + '_' + data_representation
+            for m2 in models:
+                if data_representation != 'binary':
+                    m2 = m2 + '_' + data_representation
+                if m1 != m2:
+                    with open(results_5x2cv_paired_f_test + target_drugs[i] + '/' + m1 + '.json') as json_data:
+                        m1_results = json.load(json_data)
+
+                    with open(results_5x2cv_paired_f_test + target_drugs[i] + '/' + m2 + '.json') as json_data:
+                        m2_results = json.load(json_data)
+
+                    res = compare_models_wrt_5x2cv_paired_f_test(m1_results, m2_results)
+                    if res == 0:
+                        print('Not significantly different: ' + m1 + ' and ' + m2)
+                    elif res == 1:
+                        print(m1 + ' is better than ' + m2)
+                    elif res == -1:
+                        print(m2 + ' is better than ' + m1)
