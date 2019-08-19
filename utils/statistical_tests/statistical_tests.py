@@ -3,6 +3,10 @@ import json
 from scipy import stats
 
 
+def cochrans_q_test():
+    pass
+
+
 def compare_models_wrt_kfold_cross_validated_paired_t_test(arr1, arr2):
     k = len(arr1)
 
@@ -41,55 +45,60 @@ def choose_best_hyperparameters(json_containing_cross_validation_results):
     return best_hyperparameter_id
 
 
-def compare_models_wrt_5x2cv_paired_t_test(results_model1, results_model2):
+def compare_models_wrt_5x2cv_paired_t_test(results_model1, results_model2, metric='f1'):
     s_sq = np.zeros(5)
     p_mat = np.zeros((5, 2))
     # calculating variance estimates
 
     for i in range(0, 5):
-        p_mat[i][0] = results_model1[i][0]['accuracy'] - results_model2[i][0]['accuracy']
-        p_mat[i][1] = results_model1[i][1]['accuracy'] - results_model2[i][1]['accuracy']
+        p_mat[i][0] = results_model1[i][0][metric] - results_model2[i][0][metric]
+        p_mat[i][1] = results_model1[i][1][metric] - results_model2[i][1][metric]
         s_sq[i] = (np.square(p_mat[i][0] - np.mean(p_mat[i])) + np.square(p_mat[i][1] - np.mean(p_mat[i])))
 
-    t = p_mat[0][0] / np.sqrt(np.sum(s_sq) / 5)
+    t = p_mat[0][0] / (np.sqrt(np.sum(s_sq) / 5) if np.sqrt(np.sum(s_sq) / 5)>0 else 1)
+    print("t estimation: " + str(t) + ' and t value with 95 confidence interval: ' + str(stats.t.ppf(1 - 0.025, 5)))
 
     if t > stats.t.ppf(1 - 0.025, 5) or t < -stats.t.ppf(1 - 0.025, 5):
         if np.mean(p_mat) < 0:
             # model 2 is better
-            return -1
+            return t, -1
         elif np.mean(p_mat) > 0:
             # model 1 is better
-            return 1
+            return t, 1
         else:
             print('Boss, we have an issue')
     else:
         # print('Models are not significantly different')
-        return 0
+        return t, 0
 
 
-def compare_models_wrt_5x2cv_paired_f_test(results_model1, results_model2):
+def compare_models_wrt_5x2cv_paired_f_test(results_model1, results_model2, metric='f1'):
     s_sq = np.zeros(5)
     p_mat = np.zeros((5, 2))
     # calculating variance estimates
 
+    # metrics = ['sensitivity/recall', 'f1', 'accuracy']
+
     for i in range(0, 5):
-        p_mat[i][0] = results_model1[i][0]['accuracy'] - results_model2[i][0]['accuracy']
-        p_mat[i][1] = results_model1[i][1]['accuracy'] - results_model2[i][1]['accuracy']
+        p_mat[i][0] = results_model1[i][0][metric] - results_model2[i][0][metric]
+        p_mat[i][1] = results_model1[i][1][metric] - results_model2[i][1][metric]
         s_sq[i] = (np.square(p_mat[i][0] - np.mean(p_mat[i])) + np.square(p_mat[i][1] - np.mean(p_mat[i])))
 
-    f = np.sum(np.square(p_mat)) / (2 * np.sum(s_sq))
+    # Prevent divisor to be 0
+    f = np.sum(np.square(p_mat)) / ((2 * np.sum(s_sq)) if np.sum(s_sq)>0 else 1)
     print("f estimation: " + str(f) + ' and f value with 95 confidence interval: ' + str(stats.f.ppf(1-0.05, 10, 5)))
+
     if f < stats.f.ppf(1-0.05, 10, 5):
         # print('Models are not significantly different')
-        return 0
+        return f, 0
     else:
         # print('Models are significantly different')
         if np.mean(p_mat) < 0:
             # model 2 is better
-            return -1
+            return f, -1
         elif np.mean(p_mat) >= 0:
             # model 1 is better
-            return 1
+            return f, 1
         else:
             print('Boss, we have an issue')
 
@@ -108,17 +117,15 @@ if __name__ == '__main__':
 
     results_5x2cv_paired_f_test = '/run/media/herkut/herkut/TB_genomes/ar_detector_results/5x2cv_f_tests/'
 
-    data_representation = 'tfrf'
-    models = ['svm_linear', 'svm_rbf', 'lr', 'rf']
+    data_representations = ['binary', 'tfrf', 'bm25tfrf']
+    models = ['svm_linear', 'svm_rbf', 'lr', 'rf', 'dnn1', 'dnn2']
 
     for i in range(0, len(target_drugs)):
         print('For ' + target_drugs[i] + ': ')
         for m1 in models:
-            if data_representation != 'binary':
-                m1 = m1 + '_' + data_representation
+            m1 = m1 + '_' + data_representations[0]
             for m2 in models:
-                if data_representation != 'binary':
-                    m2 = m2 + '_' + data_representation
+                m2 = m2 + '_' + data_representations[0]
                 if m1 != m2:
                     with open(results_5x2cv_paired_f_test + target_drugs[i] + '/' + m1 + '.json') as json_data:
                         m1_results = json.load(json_data)
@@ -126,7 +133,7 @@ if __name__ == '__main__':
                     with open(results_5x2cv_paired_f_test + target_drugs[i] + '/' + m2 + '.json') as json_data:
                         m2_results = json.load(json_data)
 
-                    res = compare_models_wrt_5x2cv_paired_f_test(m1_results, m2_results)
+                    t_f, res = compare_models_wrt_5x2cv_paired_t_test(m1_results, m2_results, metric='f1')
                     if res == 0:
                         print('Not significantly different: ' + m1 + ' and ' + m2)
                     elif res == 1:
