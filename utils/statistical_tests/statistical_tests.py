@@ -142,10 +142,10 @@ def draw_box_plots(results_dir, drug, metric='f1'):
                 values[model + '_' + data_representation].append(model_result[0][metric])
                 values[model + '_' + data_representation].append(model_result[1][metric])
 
-    plt.title('F1 scores')
+    plt.title(metric)
     plt.boxplot(values.values(), patch_artist=True, labels=values.keys())
     plt.xticks(size=5, rotation=45)
-    plt.savefig(results_dir + drug + '.png')
+    plt.savefig(results_dir + drug + '_' + metric + '.png' if metric != 'sensitivity/recall' else results_dir + drug + '_sensitivity.png')
     plt.close()
 
 
@@ -161,14 +161,14 @@ if __name__ == '__main__':
     target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin',
                     'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
 
-    results_5x2cv_paired_f_test = '/run/media/herkut/hdd-1/TB_genomes/ar_detector_results/5x2cv_f_tests/'
+    results_5x2cv_paired_f_test = '/run/media/herkut/herkut/TB_genomes/ar_detector_results/5x2cv_f_tests/'
 
     data_representations = ['binary', 'tfrf', 'bm25tfrf']
     models = ['svm_linear', 'svm_rbf', 'lr', 'rf', 'dnn1', 'dnn2']
 
     for i in range(0, len(target_drugs)):
         print('For ' + target_drugs[i] + ': ')
-        draw_box_plots(results_5x2cv_paired_f_test, target_drugs[i])
+        draw_box_plots(results_5x2cv_paired_f_test, target_drugs[i], metric='sensitivity/recall')
         for m1 in models:
             m1 = m1 + '_' + data_representations[2]
             for m2 in models:
