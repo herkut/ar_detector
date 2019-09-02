@@ -65,8 +65,17 @@ class FindMutationsOnTargetGenes:
                 first_line = f.readline()
                 elements = first_line.split(' ')
                 # replacing 'c' with '' some target genes containing c character just before their positions on the DNA
+                # when c occurs the start and end positions are in reverse order, i believe it states that protein
+                # synthesis are done in reverse order. For instance assume gene locations for A c100-90
+                # protein would synthesized starting from 100 and ending at 90. However, to find mutations on these gene
+                # we should query in common order.
                 tmp = elements[0].replace('>', '').replace('c', '')
                 tmp_arr = tmp.split(':')[1].split('-')
+                min_el = min(tmp_arr)
+                max_el = max(tmp_arr)
+                tmp_arr[0] = min_el
+                tmp_arr[1] = max_el
+
                 if (int(tmp_arr[0]) - additional_base_pair_upstream) < 0:
                     tmp_arr[0] = str(0)
                 else:
