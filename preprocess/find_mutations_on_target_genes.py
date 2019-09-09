@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from preprocess.variants_finder import VariantsFinder
 
-#############################################################################33
+#############################################################################
 TARGET_GENES_DIRECTORY = '/run/media/herkut/herkut/TB_genomes/target_genes/'
 GENOMES_DIRECTORY = '/run/media/herkut/herkut/TB_genomes/genomes/'
 BCFTOOLS = '/home/herkut/Desktop/TB_genomes/tools/bcftools-1.9/bin/bcftools'
@@ -17,7 +17,7 @@ CHROMOSOME = 'NC_000962.3'
 MUTATIONS_TARGET_DIRECTORY = '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/new_approach/'
 MUTATIONS_FILE_PREFIX = 'feature_matrix_09_'
 MUTATIONS_FILE_LIKE_BASELINE_PREFIX = 'feature_matrix_like_baseline_'
-#############################################################################33
+#############################################################################
 
 
 class FindMutationsOnTargetGenes:
@@ -66,8 +66,8 @@ class FindMutationsOnTargetGenes:
                 elements = first_line.split(' ')
                 # replacing 'c' with '' some target genes containing c character just before their positions on the DNA
                 # when c occurs the start and end positions are in reverse order, i believe it states that protein
-                # synthesis are done in reverse order. For instance assume gene locations for A c100-90
-                # protein would synthesized starting from 100 and ending at 90. However, to find mutations on these gene
+                # synthesis are done in reverse order. For instance assume gene locations for c100-90
+                # protein would synthesized starting from 100 and ending at 90. However; to find mutations on these gene
                 # we should query in common order.
                 tmp = elements[0].replace('>', '').replace('c', '')
                 tmp_arr = tmp.split(':')[1].split('-')
@@ -268,7 +268,7 @@ class FindMutationsOnTargetGenes:
     @staticmethod
     def filter_mutations_occurred_only_once():
         removed_mutations = []
-        # TODO check whether = asigns address or it copies the original panda frame
+        # TODO check whether = assigns address or it copies the original panda frame
         mutations_without_unique_ones = FindMutationsOnTargetGenes.MUTATIONS.copy(deep=True)
         for column in FindMutationsOnTargetGenes.MUTATIONS:
             x = mutations_without_unique_ones[column].value_counts()

@@ -34,7 +34,7 @@ class DataRepresentationPreparer:
 
         return tfrf
 
-    # k parameter is taken from Özlem's paper named 'Statistical representation models for mutation information within genomic data'
+    # k parameter is taken from Ozlem's paper named 'Statistical representation models for mutation information within genomic data'
     @staticmethod
     def update_feature_matrix_with_bm25_tf_idf(feature_matrix):
         k = 0.8
@@ -49,7 +49,7 @@ class DataRepresentationPreparer:
 
         return bm25tfidf
 
-    # k parameter is taken from Özlem's paper named 'Statistical representation models for mutation information within genomic data'
+    # k parameter is taken from Ozlem's paper named 'Statistical representation models for mutation information within genomic data'
     @staticmethod
     def update_feature_matrix_with_bm25_tf_rf(feature_matrix, labels):
         k = 0.8
