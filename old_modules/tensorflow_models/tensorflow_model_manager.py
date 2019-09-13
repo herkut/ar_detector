@@ -2,13 +2,12 @@ import json
 import timeit
 
 import numpy as np
-from pandas.core.common import random_state
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
 
-from models.tensorflow_models.ar_detector_dnn import Dnn1D
-from models.tensorflow_models.ar_detector_dnn import Dnn2D
-from models.tensorflow_models.ar_detector_dnn import DnnND
+from deprecated.tensorflow_models.ar_detector_dnn import Dnn1D
+from deprecated.tensorflow_models.ar_detector_dnn import Dnn2D
+from deprecated.tensorflow_models.ar_detector_dnn import DnnND
 
 from preprocess.data_representation_preparer import DataRepresentationPreparer
 

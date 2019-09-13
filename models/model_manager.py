@@ -1,8 +1,5 @@
 import numpy as np
-from pandas.core.common import random_state
-from sklearn.model_selection import train_test_split
 
-from models.dnn import ArDetectorByDNN
 from models.logistic_regression import ARDetectorByLogisticRegression
 from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear

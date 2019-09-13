@@ -13,6 +13,8 @@ import pandas as pd
 from utils.confusion_matrix_drawer import plot_confusion_matrix
 from utils.numpy_encoder import NumpyEncoder
 
+import config as cfg
+
 
 class ARDetectorBySVMWithRBF:
     def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
