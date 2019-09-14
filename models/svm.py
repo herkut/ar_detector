@@ -10,24 +10,25 @@ from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from models.base_ar_detector import BaseARDetector
 from utils.confusion_matrix_drawer import plot_confusion_matrix
 from utils.numpy_encoder import NumpyEncoder
 
-import config as cfg
+from config import Config
 
 
-class ARDetectorBySVMWithRBF:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
-        self._target_base_directory = target_base_directory
+class ARDetectorBySVMWithRBF(BaseARDetector):
+    def __init__(self, feature_selection, antibiotic_name=None, class_weights=None):
+        self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
-        self._label_tags = label_tags
+        self._label_tags = Config.label_tags
         if class_weights is None:
             self._model = svm.SVC(kernel='rbf')
         else:
             self._model = svm.SVC(kernel='rbf', class_weight=class_weights)
         self._best_model = None
         self._antibiotic_name = antibiotic_name
-        self._scoring = scoring
+        self._scoring = Config.traditional_ml_scoring
         self._target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
     def set_antibiotic_name(self, antibiotic_name):
@@ -40,7 +41,7 @@ class ARDetectorBySVMWithRBF:
             self._model = svm.SVC(kernel='rbf', C=parameters['C'], gamma=parameters['gamma'], class_weight=class_weights)
 
     def load_model(self):
-        self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_model_for_' + self._antibiotic_name + '.sav')
+        self._best_model = joblib.load(os.path.join(self._results_directory, 'best_models', self._target_directory, 'svm_rbf_model_for_' + self._antibiotic_name + '.sav'))
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
@@ -50,17 +51,17 @@ class ARDetectorBySVMWithRBF:
 
         print(grid)
 
-        if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'grid_search_scores/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
-        with open(self._target_base_directory + 'grid_search_scores/' + self._target_directory + '/svm_rbf_' + self._antibiotic_name + '.json', 'w') as f:
+        with open(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory, '/svm_rbf_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
-        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
-        with open(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_' + self._antibiotic_name + '.json','w') as f:
+        with open(os.path.join(self._results_directory, 'best_models', self._target_directory, 'svm_rbf_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.best_params_, cls=NumpyEncoder))
 
         print('Summary of the model:')
@@ -70,11 +71,11 @@ class ARDetectorBySVMWithRBF:
 
         self._best_model = grid.best_estimator_
 
-        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
         # save the model to disk
-        filename = self._target_base_directory + 'best_models/' + self._target_directory + '/svm_rbf_model_for_' + self._antibiotic_name + '.sav'
+        filename = os.path.join(self._results_directory, 'best_models', self._target_directory, 'svm_rbf_model_for_' + self._antibiotic_name + '.sav')
         joblib.dump(self._best_model, filename)
 
     def predict_ar(self, x):
@@ -103,33 +104,33 @@ class ARDetectorBySVMWithRBF:
 
         plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'confusion_matrices/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory))
 
-        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/normalized_svm_with_rbf_' + self._antibiotic_name + '.png')
+        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'normalized_svm_with_rbf_' + self._antibiotic_name + '.png'))
 
         plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
-        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_with_rbf_' + self._antibiotic_name + '.png')
+        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, '/svm_with_rbf_' + self._antibiotic_name + '.png'))
 
         y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
-        df_confusion.to_csv(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_rbf_' + self._antibiotic_name + '.csv')
+        df_confusion.to_csv(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'svm_rbf_' + self._antibiotic_name + '.csv'))
 
 
-class ARDetectorBySVMWithLinear:
-    def __init__(self, target_base_directory, feature_selection, antibiotic_name=None, label_tags='phenotype', scoring='roc_auc', class_weights=None):
-        self._target_base_directory = target_base_directory
+class ARDetectorBySVMWithLinear(BaseARDetector):
+    def __init__(self, feature_selection, antibiotic_name=None, class_weights=None):
+        self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
-        self._label_tags = label_tags
+        self._label_tags = Config.label_tags
         if class_weights is None:
             self._model = svm.SVC(kernel='linear')
         else:
             self._model = svm.SVC(kernel='linear', class_weight=class_weights)
         self._best_model = None
         self._antibiotic_name = antibiotic_name
-        self._scoring = scoring
+        self._scoring = Config.traditional_ml_scoring
         self._target_directory = 'svm_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
     def set_antibiotic_name(self, antibiotic_name):
@@ -142,7 +143,7 @@ class ARDetectorBySVMWithLinear:
             self._model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'], class_weight=class_weights)
 
     def load_model(self):
-        self._best_model = joblib.load(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_linear_model_for_' + self._antibiotic_name + '.sav')
+        self._best_model = joblib.load(os.path.join(self._results_directory, 'best_models', self._target_directory, 'svm_linear_model_for_' + self._antibiotic_name + '.sav'))
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
@@ -152,17 +153,17 @@ class ARDetectorBySVMWithLinear:
 
         print(grid)
 
-        if not os.path.exists(self._target_base_directory + 'grid_search_scores/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'grid_search_scores/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory + 'grid_search_scores/' + self._target_directory))
 
-        with open(self._target_base_directory + 'grid_search_scores/' + self._target_directory + '/svm_linear_' + self._antibiotic_name + '.json', 'w') as f:
+        with open(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory, 'svm_linear_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
-        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
-        with open(self._target_base_directory + 'best_models/' + self._target_directory + '/svm_linear_' + self._antibiotic_name + '.json','w') as f:
+        with open(os.path.join(self._results_directory, 'best_models', self._target_directory, 'svm_linear_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.best_params_, cls=NumpyEncoder))
 
         print('Summary of the model:')
@@ -171,11 +172,11 @@ class ARDetectorBySVMWithLinear:
 
         self._best_model = grid.best_estimator_
 
-        if not os.path.exists(self._target_base_directory + 'best_models/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'best_models/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
         # save the model to disk
-        filename = self._target_base_directory + 'best_models/' + self._target_directory + '/svm_linear_model_for_' + self._antibiotic_name + '.sav'
+        filename = os.path.join(self._results_directory, 'best_models', self._target_directory, 'svm_linear_model_for_' + self._antibiotic_name + '.sav')
         joblib.dump(self._best_model, filename)
 
     def predict_ar(self, x):
@@ -204,16 +205,16 @@ class ARDetectorBySVMWithLinear:
 
         plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=True, title='Normalized confusion matrix')
 
-        if not os.path.exists(self._target_base_directory + 'confusion_matrices/' + self._target_directory):
-            os.makedirs(self._target_base_directory + 'confusion_matrices/' + self._target_directory)
+        if not os.path.exists(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory))
 
-        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/normalized_svm_with_linear_' + self._antibiotic_name + '.png')
+        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'normalized_svm_with_linear_' + self._antibiotic_name + '.png'))
 
         plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
-        plt.savefig(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_with_linear_' + self._antibiotic_name + '.png')
+        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'svm_with_linear_' + self._antibiotic_name + '.png'))
 
         y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
-        df_confusion.to_csv(self._target_base_directory + 'confusion_matrices/' + self._target_directory + '/svm_linear_' + self._antibiotic_name + '.csv')
+        df_confusion.to_csv(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'svm_linear_' + self._antibiotic_name + '.csv'))
