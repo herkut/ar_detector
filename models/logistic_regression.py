@@ -48,7 +48,7 @@ class ARDetectorByLogisticRegression(BaseARDetector):
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
 
-        grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=-1)
+        grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=Config.scikit_learn_n_jobs)
         grid.fit(x_tr, y_tr)
 
         print(grid)
