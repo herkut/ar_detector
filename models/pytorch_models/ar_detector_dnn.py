@@ -77,6 +77,9 @@ class FeetForwardNetwork(torch.nn.module):
 
 
 class PytorchARDetector(BaseARDetector):
+    def __init__(self, feature_selection, antibiotic_name=None, class_weights=None):
+        pass
+
     def load_model(self):
         pass
 

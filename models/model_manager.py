@@ -1,18 +1,13 @@
+import json
+import os
+
 import numpy as np
 
+from config import Config
 from models.logistic_regression import ARDetectorByLogisticRegression
 from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
-
-######################################################################
 from preprocess.data_representation_preparer import DataRepresentationPreparer
-
-target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin', 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
-label_tags = 'phenotype'
-TRADITIONAL_ML_SCORING = 'accuracy'
-directory_containing_indexes = '/run/media/herkut/hdd-1/TB_genomes/features/dataset-1-train_test_indexes/'
-TEST_SIZE = 0.2
-######################################################################
 
 
 class ModelManager:
@@ -36,15 +31,15 @@ class ModelManager:
             if model == 'lr':
                 self.enable_lr = True
 
-    def train_and_test_models(self, results_directory, feature_selection, raw_feature_matrix, raw_labels):
-        for i in range(len(target_drugs)):
-            x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[target_drugs[i]])
+    def train_and_test_models(self, feature_selection, raw_feature_matrix, raw_labels):
+        for i in range(len(Config.target_drugs)):
+            x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(directory_containing_indexes + target_drugs[i] + '_tr_indices.csv',
+            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_tr_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
-            te_indexes = np.genfromtxt(directory_containing_indexes + target_drugs[i] + '_te_indices.csv',
+            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_te_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
@@ -76,7 +71,7 @@ class ModelManager:
 
             class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
-            print("For the antibiotic " + target_drugs[i])
+            print("For the antibiotic " + Config.target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
             print("Size of test dataset " + str(np.shape(x_test)))
 
@@ -86,22 +81,16 @@ class ModelManager:
             #                                   #
             #####################################
             if self.enable_svm_rbf:
-                ar_detector = ARDetectorBySVMWithRBF(results_directory,
-                                                     feature_selection,
-                                                     target_drugs[i],
-                                                     label_tags=label_tags,
-                                                     scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorBySVMWithRBF(feature_selection,
+                                                     Config.target_drugs[i],
                                                      class_weights=class_weights)
                 # train the model
                 self.train_svm_with_rbf(ar_detector,
                                         x_train,
                                         y_train)
                 # test the model
-                ar_detector = ARDetectorBySVMWithRBF(results_directory,
-                                                     feature_selection,
-                                                     target_drugs[i],
-                                                     label_tags=label_tags,
-                                                     scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorBySVMWithRBF(feature_selection,
+                                                     Config.target_drugs[i],
                                                      class_weights=class_weights)
                 self.test_svm_with_rbf(ar_detector,
                                        x_test,
@@ -112,22 +101,16 @@ class ModelManager:
             #                                   #
             #####################################
             if self.enable_svm_linear:
-                ar_detector = ARDetectorBySVMWithLinear(results_directory,
-                                                        feature_selection,
-                                                        target_drugs[i],
-                                                        label_tags=label_tags,
-                                                        scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorBySVMWithLinear(feature_selection,
+                                                        Config.target_drugs[i],
                                                         class_weights=class_weights)
                 # train the model
                 self.train_svm_with_rbf(ar_detector,
                                         x_train,
                                         y_train)
                 # test the model
-                ar_detector = ARDetectorBySVMWithLinear(results_directory,
-                                                        feature_selection,
-                                                        target_drugs[i],
-                                                        label_tags=label_tags,
-                                                        scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorBySVMWithLinear(feature_selection,
+                                                        Config.target_drugs[i],
                                                         class_weights=class_weights)
                 self.test_svm_with_rbf(ar_detector,
                                        x_test,
@@ -139,22 +122,16 @@ class ModelManager:
             #                                   #
             #####################################
             if self.enable_rf:
-                ar_detector = ARDetectorByRandomForest(results_directory,
-                                                       feature_selection,
-                                                       target_drugs[i],
-                                                       label_tags=label_tags,
-                                                       scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorByRandomForest(feature_selection,
+                                                       Config.target_drugs[i],
                                                        class_weights=class_weights)
                 # train the model
                 self.train_random_forest(ar_detector,
                                          x_train,
                                          y_train)
                 # test the model
-                ar_detector = ARDetectorByRandomForest(results_directory,
-                                                       feature_selection,
-                                                       target_drugs[i],
-                                                       label_tags=label_tags,
-                                                       scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorByRandomForest(feature_selection,
+                                                       Config.target_drugs[i],
                                                        class_weights=class_weights)
                 self.test_random_forest(ar_detector,
                                         x_test,
@@ -166,22 +143,16 @@ class ModelManager:
             #                                   #
             #####################################
             if self.enable_lr:
-                ar_detector = ARDetectorByLogisticRegression(results_directory,
-                                                             feature_selection,
-                                                             target_drugs[i],
-                                                             label_tags=label_tags,
-                                                             scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorByLogisticRegression(feature_selection,
+                                                             Config.target_drugs[i],
                                                              class_weights=class_weights)
                 # train the model
                 self.train_logistic_regression(ar_detector,
                                                x_train,
                                                y_train)
                 # test the model
-                ar_detector = ARDetectorByLogisticRegression(results_directory,
-                                                             feature_selection,
-                                                             target_drugs[i],
-                                                             label_tags=label_tags,
-                                                             scoring=TRADITIONAL_ML_SCORING,
+                ar_detector = ARDetectorByLogisticRegression(feature_selection,
+                                                             Config.target_drugs[i],
                                                              class_weights=class_weights)
                 self.test_logistic_regression(ar_detector,
                                               x_test,
@@ -189,26 +160,22 @@ class ModelManager:
 
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
-        #index_to_remove = np.argwhere(np.isnan(y)).values
 
         xx = x.drop(index_to_remove, inplace=False)
         yy = y.drop(index_to_remove, inplace=False)
-
-        #xx = np.delete(x, index_to_remove, axis=0)
-        #yy = np.delete(y, index_to_remove, axis=0)
 
         return xx, yy
 
     def train_svm_with_rbf(self, ar_detector, x_tr, y_tr):
         # conduct svm model
-        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
-        gamma_range = [0.001, 0.1, 1, 10, 100]
+        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'svm_rbf.json')):
+            raise Exception('Hyperparameter grid could not be found for svm rbf: ' + os.path.join(Config.hyperparameter_grids_directory, 'svm_rbf.json'))
 
-        param_grid = {'C': c_range, 'gamma': gamma_range}
+        with open(os.path.join(Config.hyperparameter_grids_directory, 'svm_rbf.json')) as json_data:
+            param_grid = json.load(json_data)
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
@@ -216,19 +183,21 @@ class ModelManager:
 
     def train_svm_with_linear(self, ar_detector, x_tr, y_tr):
         # conduct svm model
-        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
+        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'svm_linear.json')):
+            raise Exception('Hyperparameter grid could not be found for svm linear: ' + os.path.join(Config.hyperparameter_grids_directory, 'svm_linear.json'))
 
-        param_grid = {'C': c_range}
+        with open(os.path.join(Config.hyperparameter_grids_directory, 'svm_linear.json')) as json_data:
+            param_grid = json.load(json_data)
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
 
     def train_random_forest(self, ar_detector, x_tr, y_tr):
+        """
         # bootstrap = [True, False]
         n_estimators = [100, 250, 500, 1000]
         max_features = ['sqrt', 'log2', None]
@@ -243,27 +212,29 @@ class ModelManager:
         if max_depth is not None:
             param_grid['max_depth'] = max_depth
 
+        """
+        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'rf.json')):
+            raise Exception('Hyperparameter grid could not be found for rf: ' + os.path.join(Config.hyperparameter_grids_directory, 'rf.json'))
+
+        with open(os.path.join(Config.hyperparameter_grids_directory, 'rf.json')) as json_data:
+            param_grid = json.load(json_data)
+
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
 
     def train_logistic_regression(self, ar_detector, x_tr, y_tr):
-        c_range = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000]
-        # 'none', 'elasticnet', 'l1',
-        penalty = ['l2']
-        solver = ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'lr.json')):
+            raise Exception('Hyperparameter grid could not be found for lr: ' + os.path.join(Config.hyperparameter_grids_directory, 'lr.json'))
 
-        param_grid = {'C': c_range,
-                      'penalty': penalty,
-                      'solver': solver}
+        with open(os.path.join(Config.hyperparameter_grids_directory, 'lr.json')) as json_data:
+            param_grid = json.load(json_data)
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
         print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-        #print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 

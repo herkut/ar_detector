@@ -5,6 +5,7 @@ class Config:
     dataset_directory = None
     base_directory = None
     results_directory = None
+    hyperparameter_grids_directory = None
     dataset_index_directory = None
     traditional_ml_scoring = None
     label_tags = None
@@ -21,6 +22,7 @@ class Config:
         cls.traditional_ml_scoring = raw['traditional_ml_scoring']
         cls.label_tags = raw['label_tags']
         cls.scikit_learn_n_jobs = raw['n_jobs']
+        cls.hyperparameter_grids_directory = raw['hyperparameter_grids_directory']
 
         cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin',
                                 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']

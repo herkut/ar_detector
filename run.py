@@ -49,7 +49,7 @@ def main():
             print("Models would be trained and tested for feature selection method: " + k)
             raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory, 'labels.csv'))
             raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
-            model_manager.train_and_test_models(results_directory, k, raw_feature_matrix, raw_label_matrix)
+            model_manager.train_and_test_models(k, raw_feature_matrix, raw_label_matrix)
 
     elif args['execute_experiments']:
         models = args['<models>']
