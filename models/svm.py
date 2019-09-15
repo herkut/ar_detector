@@ -54,7 +54,7 @@ class ARDetectorBySVMWithRBF(BaseARDetector):
         if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
-        with open(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory, '/svm_rbf_' + self._antibiotic_name + '.json'), 'w') as f:
+        with open(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory, 'svm_rbf_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
@@ -111,7 +111,7 @@ class ARDetectorBySVMWithRBF(BaseARDetector):
 
         plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
 
-        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, '/svm_with_rbf_' + self._antibiotic_name + '.png'))
+        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'svm_with_rbf_' + self._antibiotic_name + '.png'))
 
         y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
@@ -154,7 +154,7 @@ class ARDetectorBySVMWithLinear(BaseARDetector):
         print(grid)
 
         if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
-            os.makedirs(os.path.join(self._results_directory + 'grid_search_scores/' + self._target_directory))
+            os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
         with open(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory, 'svm_linear_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
