@@ -11,6 +11,7 @@ class Config:
     label_tags = None
     target_drugs = None
     scikit_learn_n_jobs = None
+    deep_learning_metric = None
 
     @classmethod
     def initialize_configurations(cls, cfg):
@@ -23,6 +24,7 @@ class Config:
         cls.label_tags = raw['label_tags']
         cls.scikit_learn_n_jobs = raw['n_jobs']
         cls.hyperparameter_grids_directory = raw['hyperparameter_grids_directory']
+        cls.deep_learning_metric = raw['deep_learning_metric']
 
         cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin',
                                 'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
