@@ -92,9 +92,9 @@ class ModelManager:
                 ar_detector = ARDetectorBySVMWithRBF(feature_selection,
                                                      Config.target_drugs[i],
                                                      class_weights=class_weights)
-                self.test_svm_with_rbf(ar_detector,
-                                       x_test,
-                                       y_test)
+                self.test_ar_detector(ar_detector,
+                                      x_test,
+                                      y_test)
             #####################################
             #                                   #
             #         SVM with linear           #
@@ -112,9 +112,9 @@ class ModelManager:
                 ar_detector = ARDetectorBySVMWithLinear(feature_selection,
                                                         Config.target_drugs[i],
                                                         class_weights=class_weights)
-                self.test_svm_with_rbf(ar_detector,
-                                       x_test,
-                                       y_test)
+                self.test_ar_detector(ar_detector,
+                                      x_test,
+                                      y_test)
 
             #####################################
             #                                   #
@@ -133,9 +133,9 @@ class ModelManager:
                 ar_detector = ARDetectorByRandomForest(feature_selection,
                                                        Config.target_drugs[i],
                                                        class_weights=class_weights)
-                self.test_random_forest(ar_detector,
-                                        x_test,
-                                        y_test)
+                self.test_ar_detector(ar_detector,
+                                      x_test,
+                                      y_test)
 
             #####################################
             #                                   #
@@ -154,9 +154,9 @@ class ModelManager:
                 ar_detector = ARDetectorByLogisticRegression(feature_selection,
                                                              Config.target_drugs[i],
                                                              class_weights=class_weights)
-                self.test_logistic_regression(ar_detector,
-                                              x_test,
-                                              y_test)
+                self.test_ar_detector(ar_detector,
+                                      x_test,
+                                      y_test)
 
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
@@ -240,25 +240,7 @@ class ModelManager:
 
         print(ar_detector._best_model)
 
-    def test_svm_with_rbf(self, ar_detector, x_te, y_te):
-        print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
-
-        ar_detector.load_model()
-        ar_detector.test_model(x_te, y_te)
-
-    def test_svm_with_linear(self, ar_detector, x_te, y_te):
-        print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
-
-        ar_detector.load_model()
-        ar_detector.test_model(x_te, y_te)
-
-    def test_random_forest(self, ar_detector, x_te, y_te):
-        print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
-
-        ar_detector.load_model()
-        ar_detector.test_model(x_te, y_te)
-
-    def test_logistic_regression(self, ar_detector, x_te, y_te):
+    def test_ar_detector(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
 
         ar_detector.load_model()
