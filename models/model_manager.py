@@ -167,8 +167,8 @@ class ModelManager:
             #               DNN                 #
             #                                   #
             #####################################
-            if not self.dnn_models:
-                # convert class weight into numpy martix
+            if self.dnn_models:
+                # convert class weight into numpy matrix
                 class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
                 for dnn_model in self.dnn_models:
                     ar_detector = ARDetectorDNN(feature_selection,
