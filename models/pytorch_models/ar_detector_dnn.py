@@ -1,4 +1,5 @@
 import torch
+import torch.utils.data as utils
 
 from config import Config
 from models.base_ar_detector import BaseARDetector
@@ -96,8 +97,8 @@ class FeetForwardNetwork(torch.nn.module):
         return 'dnn-' + str(len(self.fcs)) + 'd'
 
 
-class PytorchARDetector(BaseARDetector):
-    def __init__(self, feature_selection, antibiotic_name=None, class_weights=None):
+class ARDetectorDNN(BaseARDetector):
+    def __init__(self, feature_selection, antibiotic_name=None, model_name='dnn', class_weights=None):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
         self._label_tags = Config.label_tags
@@ -109,7 +110,7 @@ class PytorchARDetector(BaseARDetector):
         self._label_tags = Config.label_tags
 
         self._target_directory = None
-        self._model_name = None
+        self._model_name = model_name
         self._class_weights = class_weights
 
     def save_model(self):
@@ -125,8 +126,13 @@ class PytorchARDetector(BaseARDetector):
         # x_tr[0] sample counts x_tr[1] feature size
         feature_size = x_tr.shape[1]
 
+        # create dataset and dataloader
         # convert labels into one hot encoded
         y_tr_one_hot = torch.nn.functional.one_hot(y_tr, num_classes=2)
+        x_tr_tensor = torch.stack([torch.Tensor(i) for i in x_tr])  # transform to torch tensors
+        ar_dataset = utils.TensorDataset(x_tr_tensor, y_tr_one_hot)
+        ar_dataloader = utils.DataLoader(ar_dataset, batch_size=64)
+
         # grid search
         for optimizer_param in param_grid['optimizers']:
             for lr in param_grid['learning_rates']:
@@ -156,16 +162,25 @@ class PytorchARDetector(BaseARDetector):
                             # Train the model
                             # TODO implement early stopping
                             for epoch in range(2000):
-                                # initialization of gradients
-                                optimizer.zero_grad()
-                                # Forward propagation
-                                y_pred = self._model(x_tr)
-                                # Computation of cost function
-                                cost = criterion(y_pred, y_tr_one_hot, pos_weight=torch.from_numpy(self._class_weights))
-                                # Back propagation
-                                cost.backward()
-                                # Update parameters
-                                optimizer.step()
+                                running_loss = 0.0
+                                for i, data in enumerate(ar_dataloader, 0):
+                                    inputs, labels = data
+                                    # initialization of gradients
+                                    optimizer.zero_grad()
+                                    # Forward propagation
+                                    y_pred = self._model(inputs)
+                                    # Computation of cost function
+                                    cost = criterion(y_pred, labels, pos_weight=torch.from_numpy(self._class_weights))
+                                    # Back propagation
+                                    cost.backward()
+                                    # Update parameters
+                                    optimizer.step()
+
+                                    running_loss += cost
+
+                                    if i % 40 == 0:  # print every 2000 mini-batches
+                                        print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+                                        running_loss = 0.0
                             # End of training
 
     def predict_ar(self, x):

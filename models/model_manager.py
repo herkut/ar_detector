@@ -5,6 +5,7 @@ import numpy as np
 
 from config import Config
 from models.logistic_regression import ARDetectorByLogisticRegression
+from models.pytorch_models.ar_detector_dnn import ARDetectorDNN
 from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
 from preprocess.data_representation_preparer import DataRepresentationPreparer
@@ -20,6 +21,7 @@ class ModelManager:
         self.enable_svm_rbf = False
         self.enable_rf = False
         self.enable_lr = False
+        self.dnn_models = []
 
         for model in models_arr:
             if model == 'svm_linear':
@@ -30,6 +32,8 @@ class ModelManager:
                 self.enable_rf = True
             if model == 'lr':
                 self.enable_lr = True
+            if model.startswith('dnn'):
+                self.dnn_models.append(model)
 
     def train_and_test_models(self, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(Config.target_drugs)):
@@ -158,6 +162,22 @@ class ModelManager:
                                       x_test,
                                       y_test)
 
+            #####################################
+            #                                   #
+            #               DNN                 #
+            #                                   #
+            #####################################
+            if not self.dnn_models:
+                # convert class weight into numpy martix
+                class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
+                for dnn_model in self.dnn_models:
+                    ar_detector = ARDetectorDNN(feature_selection,
+                                                Config.target_drugs[i],
+                                                model_name=dnn_model,
+                                                class_weights=class_weights_numpy)
+                    self.train_ar_detector(ar_detector, x_train, y_train)
+
+
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
 
@@ -165,6 +185,21 @@ class ModelManager:
         yy = y.drop(index_to_remove, inplace=False)
 
         return xx, yy
+
+    def train_ar_detector(self, ar_detector, x_tr, y_tr):
+        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json')):
+            raise Exception('Hyperparameter grid could not be found for svm rbf: ' + os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json'))
+
+        with open(os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json')) as json_data:
+            param_grid = json.load(json_data)
+
+        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
+        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
+
+        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
+
+        print(ar_detector._best_model)
+
 
     def train_svm_with_rbf(self, ar_detector, x_tr, y_tr):
         # conduct svm model
