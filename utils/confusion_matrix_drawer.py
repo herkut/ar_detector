@@ -58,9 +58,9 @@ def classification_report(y_true, y_pred):
     results['FP'] = FP
     results['TN'] = TN
     results['FN'] = FN
-    results['sensitivity/recall'] = TP / (TP + FN)
-    results['specificity'] = TN / (TN + FP)
-    results['precision'] = TP / (TP + FP)
+    results['sensitivity/recall'] = TP / ((TP + FN) if (TP + FN) > 0 else 1)
+    results['specificity'] = TN / ((TN + FP) if (TN + FP) > 0 else 1)
+    results['precision'] = TP / ((TP + FP) if (TP + FP) > 0 else 1)
     results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
     results['f1'] = 2 * TP / (2 * TP + FP + FN)
 
