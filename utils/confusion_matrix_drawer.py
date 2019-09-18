@@ -16,13 +16,17 @@ def concatenate_classification_reports(report1, report2):
     results['FP'] = FP
     results['TN'] = TN
     results['FN'] = FN
-    results['sensitivity/recall'] = TP / (TP + FN)
-    results['specificity'] = TN / (TN + FP)
-    results['precision'] = TP / (TP + FP)
+    results['sensitivity/recall'] = TP / ((TP + FN) if (TP + FN) > 0 else 1)
+    results['specificity'] = TN / ((TN + FP) if (TN + FP) > 0 else 1)
+    results['precision'] = TP / ((TP + FP) if (TP + FP) > 0 else 1)
     results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
     results['f1'] = 2 * TP / (2 * TP + FP + FN)
 
     return results
+
+
+def get_class_from_probability(y_pred):
+    return 1 if torch.sigmoid(y_pred) > 0.5 else 0
 
 
 def classification_report(y_true, y_pred):
@@ -35,13 +39,13 @@ def classification_report(y_true, y_pred):
 
     if isinstance(y_true, torch.Tensor) and isinstance(y_pred, torch.Tensor):
         for i in range(len(y_pred)):
-            if torch.argmax(y_true[i]) == torch.argmax(y_pred[i]) == 1:
+            if y_true[i] == y_pred[i] == 1:
                 TP += 1
-            if torch.argmax(y_pred[i]) == 1 and torch.argmax(y_true[i]) != torch.argmax(y_pred[i]):
+            if y_pred[i] == 1 and y_true[i] != y_pred[i]:
                 FP += 1
-            if torch.argmax(y_true[i]) == torch.argmax(y_pred[i]) == 0:
+            if y_true[i] == y_pred[0] == 0:
                 TN += 1
-            if torch.argmax(y_pred[i]) == 0 and torch.argmax(y_true[i]) != torch.argmax(y_pred[i]):
+            if y_pred[i] == 0 and y_true[i] != y_pred[i]:
                 FN += 1
     else:
         for i in range(len(y_pred)):
