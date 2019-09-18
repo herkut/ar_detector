@@ -1,6 +1,28 @@
+import torch
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
+
+
+def concatenate_classification_reports(report1, report2):
+    results = {}
+
+    TP = report1['TP'] + report2['TP']
+    FP = report1['FP'] + report2['FP']
+    TN = report1['TN'] + report2['TN']
+    FN = report1['FN'] + report2['FN']
+
+    results['TP'] = TP
+    results['FP'] = FP
+    results['TN'] = TN
+    results['FN'] = FN
+    results['sensitivity/recall'] = TP / (TP + FN)
+    results['specificity'] = TN / (TN + FP)
+    results['precision'] = TP / (TP + FP)
+    results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
+    results['f1'] = 2 * TP / (2 * TP + FP + FN)
+
+    return results
 
 
 def classification_report(y_true, y_pred):
@@ -11,15 +33,26 @@ def classification_report(y_true, y_pred):
     TN = 0
     FN = 0
 
-    for i in range(len(y_pred)):
-        if y_true[i] == y_pred[i] == 1:
-            TP += 1
-        if y_pred[i] == 1 and y_true[i] != y_pred[i]:
-            FP += 1
-        if y_true[i] == y_pred[i] == 0:
-            TN += 1
-        if y_pred[i] == 0 and y_true[i] != y_pred[i]:
-            FN += 1
+    if isinstance(y_true, torch.Tensor) and isinstance(y_pred, torch.Tensor):
+        for i in range(len(y_pred)):
+            if torch.argmax(y_true[i]) == torch.argmax(y_pred[i]) == 1:
+                TP += 1
+            if torch.argmax(y_pred[i]) == 1 and torch.argmax(y_true[i]) != torch.argmax(y_pred[i]):
+                FP += 1
+            if torch.argmax(y_true[i]) == torch.argmax(y_pred[i]) == 0:
+                TN += 1
+            if torch.argmax(y_pred[i]) == 0 and torch.argmax(y_true[i]) != torch.argmax(y_pred[i]):
+                FN += 1
+    else:
+        for i in range(len(y_pred)):
+            if y_true[i] == y_pred[i] == 1:
+                TP += 1
+            if y_pred[i] == 1 and y_true[i] != y_pred[i]:
+                FP += 1
+            if y_true[i] == y_pred[i] == 0:
+                TN += 1
+            if y_pred[i] == 0 and y_true[i] != y_pred[i]:
+                FN += 1
 
     results['TP'] = TP
     results['FP'] = FP
