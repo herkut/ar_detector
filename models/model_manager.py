@@ -187,7 +187,7 @@ class ModelManager:
 
     def train_ar_detector(self, ar_detector, x_tr, y_tr):
         if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json')):
-            raise Exception('Hyperparameter grid could not be found for svm rbf: ' + os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json'))
+            raise Exception('Hyperparameter grid could not be found for ' + ar_detector._model_name + ': ' + os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json'))
 
         with open(os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json')) as json_data:
             param_grid = json.load(json_data)
