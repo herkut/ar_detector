@@ -39,6 +39,7 @@ class EarlyStopping(object):
         if self.best_index is None:
             self.best_index = epoch
             self.best_metrics = results
+            self.save_checkpoint(epoch, results, model)
         else:
             if self.mode == 'min':
                 if self.best_metrics[self.metric] - results[self.metric] > self.min_delta:
@@ -154,7 +155,7 @@ class FeetForwardNetwork(torch.nn.Module):
                 x = self.dos[i](x)
 
         out = self.predict(x)
-        out = self.softmax(out)
+        out = self.softmax(out + 1e-10)
         return out
 
     def get_name(self):
@@ -284,7 +285,7 @@ class ARDetectorDNN(BaseARDetector):
 
                     if es.step(epoch, validation_results, model):
                         # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
-                        print('Best metrics: ' + str(es.best_metrics))
+                        print('Epoch: ' + str(epoch) + ', best metrics: ' + str(es.best_metrics))
                         break
 
                     # print('[%d] training loss: %.9f' % (epoch + 1, training_results['loss']))
@@ -301,6 +302,7 @@ class ARDetectorDNN(BaseARDetector):
                 model.to(self._device)
                 model.eval()
                 cv_result['training_results'].append(self._calculate_model_performance(model, ar_dataloader_tr))
+
                 cv_result['validation_results'].append(self._calculate_model_performance(model, ar_dataloader_val))
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
