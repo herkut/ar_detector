@@ -22,6 +22,7 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         self._feature_selection = feature_selection
         self._antibiotic_name = antibiotic_name
         self._label_tags = Config.label_tags
+        self._model_name = 'lr'
         self._scoring = Config.scoring
 
         if class_weights is None:

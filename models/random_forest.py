@@ -22,6 +22,7 @@ class ARDetectorByRandomForest(BaseARDetector):
         self._results_directory = Config.target_base_directory
         self._feature_selection = feature_selection
         self._label_tags = Config.label_tags
+        self._model_name = 'rf'
 
         if class_weights is None:
             self._model = RandomForestClassifier()

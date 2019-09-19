@@ -22,10 +22,13 @@ class ARDetectorBySVMWithRBF(BaseARDetector):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
         self._label_tags = Config.label_tags
+        self._model_name = 'svm_rbf'
+
         if class_weights is None:
             self._model = svm.SVC(kernel='rbf')
         else:
             self._model = svm.SVC(kernel='rbf', class_weight=class_weights)
+
         self._best_model = None
         self._antibiotic_name = antibiotic_name
         self._scoring = Config.traditional_ml_scoring
@@ -124,10 +127,13 @@ class ARDetectorBySVMWithLinear(BaseARDetector):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
         self._label_tags = Config.label_tags
+        self._model_name = 'svm_linear'
+
         if class_weights is None:
             self._model = svm.SVC(kernel='linear')
         else:
             self._model = svm.SVC(kernel='linear', class_weight=class_weights)
+
         self._best_model = None
         self._antibiotic_name = antibiotic_name
         self._scoring = Config.traditional_ml_scoring
