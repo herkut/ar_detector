@@ -176,8 +176,8 @@ def prepare_dataloaders(batch_size, x_tr, y_tr, train_indices, validation_indice
     y_val_tensor = torch.from_numpy(y_tr[validation_indices]).long()
 
     # convert labels into one hot encoded
-    y_tr_one_hot = torch.nn.functional.one_hot(y_tr_tensor.to(torch.long), num_classes=2)
-    y_val_one_hot = torch.nn.functional.one_hot(y_val_tensor.to(torch.long), num_classes=2)
+    # y_tr_one_hot = torch.nn.functional.one_hot(y_tr_tensor.to(torch.long), num_classes=2)
+    # y_val_one_hot = torch.nn.functional.one_hot(y_val_tensor.to(torch.long), num_classes=2)
 
     # create dataset and dataloader
     ar_dataset_tr = utils.TensorDataset(x_tr_tensor, y_tr_tensor)
@@ -307,11 +307,13 @@ class ARDetectorDNN(BaseARDetector):
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
 
-        # TODO store cv_results json in related results directory
-        if not os.path.exists(os.path.join(Config.results_directory, 'best_models', self._target_directory)):
-            os.makedirs(os.path.join(Config.results_directory, 'best_models', self._target_directory))
+        if not os.path.exists(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory))
 
-        with open(os.path.join(Config.results_directory, 'best_models', self._target_directory, self._model_name + '.json'), 'w') as fp:
+        with open(os.path.join(Config.results_directory,
+                               'grid_search_scores',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
             json.dump(cv_results, fp)
 
     def predict_ar(self, x):

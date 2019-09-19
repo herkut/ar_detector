@@ -89,9 +89,9 @@ class ModelManager:
                                                      Config.target_drugs[i],
                                                      class_weights=class_weights)
                 # train the model
-                self.train_svm_with_rbf(ar_detector,
-                                        x_train,
-                                        y_train)
+                self.train_ar_detector(ar_detector,
+                                       x_train,
+                                       y_train)
                 # test the model
                 ar_detector = ARDetectorBySVMWithRBF(feature_selection,
                                                      Config.target_drugs[i],
@@ -109,9 +109,9 @@ class ModelManager:
                                                         Config.target_drugs[i],
                                                         class_weights=class_weights)
                 # train the model
-                self.train_svm_with_rbf(ar_detector,
-                                        x_train,
-                                        y_train)
+                self.train_ar_detector(ar_detector,
+                                       x_train,
+                                       y_train)
                 # test the model
                 ar_detector = ARDetectorBySVMWithLinear(feature_selection,
                                                         Config.target_drugs[i],
@@ -130,9 +130,9 @@ class ModelManager:
                                                        Config.target_drugs[i],
                                                        class_weights=class_weights)
                 # train the model
-                self.train_random_forest(ar_detector,
-                                         x_train,
-                                         y_train)
+                self.train_ar_detector(ar_detector,
+                                       x_train,
+                                       y_train)
                 # test the model
                 ar_detector = ARDetectorByRandomForest(feature_selection,
                                                        Config.target_drugs[i],
@@ -151,9 +151,9 @@ class ModelManager:
                                                              Config.target_drugs[i],
                                                              class_weights=class_weights)
                 # train the model
-                self.train_logistic_regression(ar_detector,
-                                               x_train,
-                                               y_train)
+                self.train_ar_detector(ar_detector,
+                                       x_train,
+                                       y_train)
                 # test the model
                 ar_detector = ARDetectorByLogisticRegression(feature_selection,
                                                              Config.target_drugs[i],
@@ -175,7 +175,9 @@ class ModelManager:
                                                 Config.target_drugs[i],
                                                 model_name=dnn_model,
                                                 class_weights=class_weights_numpy)
-                    self.train_ar_detector(ar_detector, x_train, y_train)
+                    self.train_ar_detector(ar_detector,
+                                           x_train,
+                                           y_train)
 
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
@@ -190,81 +192,6 @@ class ModelManager:
             raise Exception('Hyperparameter grid could not be found for ' + ar_detector._model_name + ': ' + os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json'))
 
         with open(os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json')) as json_data:
-            param_grid = json.load(json_data)
-
-        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
-        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-
-        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
-
-        print(ar_detector._best_model)
-
-
-    def train_svm_with_rbf(self, ar_detector, x_tr, y_tr):
-        # conduct svm model
-        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'svm_rbf.json')):
-            raise Exception('Hyperparameter grid could not be found for svm rbf: ' + os.path.join(Config.hyperparameter_grids_directory, 'svm_rbf.json'))
-
-        with open(os.path.join(Config.hyperparameter_grids_directory, 'svm_rbf.json')) as json_data:
-            param_grid = json.load(json_data)
-
-        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
-        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-
-        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
-
-        print(ar_detector._best_model)
-
-    def train_svm_with_linear(self, ar_detector, x_tr, y_tr):
-        # conduct svm model
-        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'svm_linear.json')):
-            raise Exception('Hyperparameter grid could not be found for svm linear: ' + os.path.join(Config.hyperparameter_grids_directory, 'svm_linear.json'))
-
-        with open(os.path.join(Config.hyperparameter_grids_directory, 'svm_linear.json')) as json_data:
-            param_grid = json.load(json_data)
-
-        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
-        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-
-        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
-
-        print(ar_detector._best_model)
-
-    def train_random_forest(self, ar_detector, x_tr, y_tr):
-        """
-        # bootstrap = [True, False]
-        n_estimators = [100, 250, 500, 1000]
-        max_features = ['sqrt', 'log2', None]
-        bootstrap = None
-        max_depth = None
-
-        param_grid = {'n_estimators': n_estimators, 'max_features': max_features}
-
-        if bootstrap is not None:
-            param_grid['bootstrap'] = bootstrap
-
-        if max_depth is not None:
-            param_grid['max_depth'] = max_depth
-
-        """
-        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'rf.json')):
-            raise Exception('Hyperparameter grid could not be found for rf: ' + os.path.join(Config.hyperparameter_grids_directory, 'rf.json'))
-
-        with open(os.path.join(Config.hyperparameter_grids_directory, 'rf.json')) as json_data:
-            param_grid = json.load(json_data)
-
-        print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
-        print('Training ' + str(x_tr.shape) + ' ' + str(y_tr.shape))
-
-        ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
-
-        print(ar_detector._best_model)
-
-    def train_logistic_regression(self, ar_detector, x_tr, y_tr):
-        if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, 'lr.json')):
-            raise Exception('Hyperparameter grid could not be found for lr: ' + os.path.join(Config.hyperparameter_grids_directory, 'lr.json'))
-
-        with open(os.path.join(Config.hyperparameter_grids_directory, 'lr.json')) as json_data:
             param_grid = json.load(json_data)
 
         print('For ' + ar_detector._antibiotic_name + ' feature and label sizes')
