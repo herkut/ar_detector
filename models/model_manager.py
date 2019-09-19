@@ -177,7 +177,6 @@ class ModelManager:
                                                 class_weights=class_weights_numpy)
                     self.train_ar_detector(ar_detector, x_train, y_train)
 
-
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
 

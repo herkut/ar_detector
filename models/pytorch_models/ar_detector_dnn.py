@@ -1,3 +1,6 @@
+import json
+import os
+
 import torch
 import torch.utils.data as utils
 
@@ -8,10 +11,11 @@ from config import Config
 from models.base_ar_detector import BaseARDetector
 from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports
 from utils.helper_functions import get_k_fold_validation_indices, create_hyperparameter_space
+from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
 
 
 class EarlyStopping(object):
-    def __init__(self, metric='loss', mode='min', min_delta=0, patience=10):
+    def __init__(self, metric='loss', mode='min', min_delta=0, patience=10, checkpoint_file='/tmp/dnn_checkpoint.pt'):
         """
 
         :param metric: loss, accuracy, f1, sensitivity, specificity, precision
@@ -26,8 +30,11 @@ class EarlyStopping(object):
         self.bad_epoch_count = 0
         self.best_index = None
         self.best_metrics = None
+        self.best_model = None
 
-    def step(self, epoch, results):
+        self.checkpoint_file = checkpoint_file
+
+    def step(self, epoch, results, model):
         # From Goodfellow's Deep Learning book
         if self.best_index is None:
             self.best_index = epoch
@@ -36,17 +43,13 @@ class EarlyStopping(object):
             if self.mode == 'min':
                 if self.best_metrics[self.metric] - results[self.metric] > self.min_delta:
                     # Update best metrics and save checkpoint
-                    self.best_index = epoch
-                    self.best_metrics = results
-                    self.bad_epoch_count = 0
+                    self.save_checkpoint(epoch, results, model)
                 else:
                     self.bad_epoch_count += 1
             else:
                 if self.best_metrics[self.metric] - results[self.metric] < self.min_delta:
                     # Update best metrics and save checkpoint
-                    self.best_index = epoch
-                    self.best_metrics = results
-                    self.bad_epoch_count = 0
+                    self.save_checkpoint(epoch, results, model)
                 else:
                     self.bad_epoch_count += 1
             if self.bad_epoch_count > self.patience:
@@ -54,8 +57,11 @@ class EarlyStopping(object):
             else:
                 return False
 
-    def save_checkpoint(self):
-        pass
+    def save_checkpoint(self, epoch, results, model):
+        self.best_index = epoch
+        self.best_metrics = results
+        self.bad_epoch_count = 0
+        torch.save(model.state_dict(), self.checkpoint_file)
 
 
 class FeetForwardNetwork(torch.nn.Module):
@@ -193,6 +199,8 @@ class ARDetectorDNN(BaseARDetector):
         self._scoring = Config.deep_learning_metric
         self._label_tags = Config.label_tags
 
+        self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
         self._target_directory = None
         self._model_name = model_name
         self._class_weights = class_weights[:, 1]
@@ -206,20 +214,20 @@ class ARDetectorDNN(BaseARDetector):
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         batch_size = 64
-        # put model in gpu if exists
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # x_tr[0] sample counts x_tr[1] feature size
         feature_size = x_tr.shape[1]
-
-        # prepare data for closs validation
-        k_fold_indices = get_k_fold_validation_indices(10, x_tr, y_tr)
 
         # grid search
         hyperparameter_space = create_hyperparameter_space(param_grid)
 
-        cv_results = {}
-        # TODO store cross validation results
+        cv_results = {'grids': [], 'training_results': [], 'validation_results': []}
         for grid in hyperparameter_space:
+            cv_results['grids'].append(grid)
+            cv_result = {'training_results': [], 'validation_results': []}
+
+            # prepare data for closs validation
+            k_fold_indices = get_k_fold_validation_indices(10, x_tr, y_tr)
+            print('Grid: ' + str(grid))
             for train_indeces, validation_indeces in k_fold_indices:
                 # initialization of dataloaders
                 ar_dataloader_tr, ar_dataloader_val = prepare_dataloaders(batch_size, x_tr, y_tr, train_indeces, validation_indeces)
@@ -233,14 +241,14 @@ class ARDetectorDNN(BaseARDetector):
                                            batch_normalization=True)
 
                 # put model into gpu if exists
-                model.to(device)
+                model.to(self._device)
                 # initialization completed
 
                 # Optimizer initialization
                 # class weight is used to handle unbalanced data
-                # BCEWithLogitsLoss = BCELoss with sigmoid in front of it
+                # BCEWithLogitsLoss = Sigmoid->BCELoss
                 # CrossEntropyLoss = LogSoftmax->NLLLoss
-                criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights))
+                criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights).to(self._device))
                 if grid['optimizer'] == 'Adam':
                     optimizer = torch.optim.Adam(model.parameters(), lr=grid['learning_rate'])
                 elif grid['optimizer'] == 'SGD':
@@ -253,46 +261,56 @@ class ARDetectorDNN(BaseARDetector):
                     raise Exception('Not implemented optimizer: ' + grid['optimizer'])
                 # Optimizer initialization completed
 
-                es = EarlyStopping(metric='loss', mode='min', patience=10)
+                # create the directory holding checkpoints if not exists
+                if not os.path.exists(os.path.join(Config.results_directory, 'checkpoints')):
+                    os.makedirs(os.path.join(Config.results_directory, 'checkpoints'))
+
+                es = EarlyStopping(metric='loss',
+                                   mode='min',
+                                   patience=10,
+                                   checkpoint_file=os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt'))
 
                 for epoch in range(2000):
                     model.train()
-                    training_loss = 0.0
+
                     training_results = None
                     validation_results = None
+
                     # Training
-                    for i, data in enumerate(ar_dataloader_tr, 0):
-                        inputs, labels = data
-                        # initialization of gradients
-                        optimizer.zero_grad()
-                        # Forward propagation
-                        y_hat = model(inputs)
-                        pred = torch.argmax(y_hat, dim=1)
-                        # Computation of cost function
-                        cost = criterion(y_hat, labels)
-                        # Back propagation
-                        cost.backward()
-                        # Update parameters
-                        optimizer.step()
-
-                        training_loss += cost
-
-                        tmp_classification_report = classification_report(labels, pred)
-                        if training_results is None:
-                            training_results = tmp_classification_report
-                        else:
-                            training_results = concatenate_classification_reports(training_results,
-                                                                                  tmp_classification_report)
-                    training_results['loss'] = training_loss
+                    training_results = self._training_step(model, optimizer, criterion, ar_dataloader_tr)
 
                     # Validation
                     validation_results = self._validate_model(model, criterion, ar_dataloader_val)
-                    if es.step(epoch, validation_results):
-                        print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
+
+                    if es.step(epoch, validation_results, model):
+                        # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
                         print('Best metrics: ' + str(es.best_metrics))
                         break
-                    print('[%d, %5d] training loss: %.9f' % (epoch + 1, i + 1, training_results['loss']))
-                    print('[%d, %5d] validation loss: %.9f' % (epoch + 1, i + 1, validation_results['loss']))
+
+                    # print('[%d] training loss: %.9f' % (epoch + 1, training_results['loss']))
+                    # print('[%d] validation loss: %.9f' % (epoch + 1, validation_results['loss']))
+                # Training has been completed, get training and validation classification report
+                # load best model and validate with training and validation test set
+                model = FeetForwardNetwork(feature_size,
+                                           2,
+                                           grid['hidden_units'],
+                                           grid['activation_functions'],
+                                           grid['dropout_rate'],
+                                           batch_normalization=True)
+                model.load_state_dict(torch.load(os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt')))
+                model.to(self._device)
+                model.eval()
+                cv_result['training_results'].append(self._calculate_model_performance(model, ar_dataloader_tr))
+                cv_result['validation_results'].append(self._calculate_model_performance(model, ar_dataloader_val))
+            cv_results['training_results'].append(cv_result['training_results'])
+            cv_results['validation_results'].append(cv_result['validation_results'])
+
+        # TODO store cv_results json in related results directory
+        if not os.path.exists(os.path.join(Config.results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(Config.results_directory, 'best_models', self._target_directory))
+
+        with open(os.path.join(Config.results_directory, 'best_models', self._target_directory, self._model_name + '.json'), 'w') as fp:
+            json.dump(cv_results, fp)
 
     def predict_ar(self, x):
         self._model.eval()
@@ -302,12 +320,45 @@ class ARDetectorDNN(BaseARDetector):
         self._model.eval()
         pass
 
+    def _training_step(self, model, optimizer, criterion, dataloader):
+        training_results = None
+        training_loss = 0.0
+        for i, data in enumerate(dataloader, 0):
+            inputs, labels = data
+            inputs = inputs.to(self._device)
+            labels = labels.to(self._device)
+            # initialization of gradients
+            optimizer.zero_grad()
+            # Forward propagation
+            y_hat = model(inputs)
+            pred = torch.argmax(y_hat, dim=1)
+            # Computation of cost function
+            cost = criterion(y_hat, labels)
+            # Back propagation
+            cost.backward()
+            # Update parameters
+            optimizer.step()
+
+            training_loss += cost
+
+            tmp_classification_report = classification_report(labels, pred)
+            if training_results is None:
+                training_results = tmp_classification_report
+            else:
+                training_results = concatenate_classification_reports(training_results,
+                                                                      tmp_classification_report)
+        training_results['loss'] = training_loss
+
+        return training_results
+
     def _validate_model(self, model, criterion, dataloader):
         validation_results = None
         validation_loss = 0.0
-        # model.eval()
         for i, data in enumerate(dataloader, 0):
             inputs, labels = data
+            inputs = inputs.to(self._device)
+            labels = labels.to(self._device)
+
             y_hat = model(inputs)
             pred = torch.argmax(y_hat, dim=1)
             cost = criterion(y_hat, labels)
@@ -321,4 +372,22 @@ class ARDetectorDNN(BaseARDetector):
                                                                         tmp_classification_report)
         validation_results['loss'] = validation_loss
 
+        return validation_results
+
+    def _calculate_model_performance(self, model, dataloader):
+        validation_results = None
+        for i, data in enumerate(dataloader, 0):
+            inputs, labels = data
+            inputs = inputs.to(self._device)
+            labels = labels.to(self._device)
+
+            y_hat = model(inputs)
+            pred = torch.argmax(y_hat, dim=1)
+
+            tmp_classification_report = classification_report(labels, pred)
+            if validation_results is None:
+                validation_results = tmp_classification_report
+            else:
+                validation_results = concatenate_classification_reports(validation_results,
+                                                                        tmp_classification_report)
         return validation_results
