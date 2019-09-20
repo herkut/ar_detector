@@ -20,7 +20,7 @@ def concatenate_classification_reports(report1, report2):
     results['specificity'] = TN / ((TN + FP) if (TN + FP) > 0 else 1)
     results['precision'] = TP / ((TP + FP) if (TP + FP) > 0 else 1)
     results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
-    results['f1'] = 2 * TP / (2 * TP + FP + FN)
+    results['f1'] = 2 * TP / ((2 * TP + FP + FN) if (TP + FP + FN) > 0 else 1)
 
     return results
 
