@@ -25,6 +25,5 @@ class Config:
         cls.scikit_learn_n_jobs = raw['n_jobs']
         cls.hyperparameter_grids_directory = raw['hyperparameter_grids_directory']
         cls.deep_learning_metric = raw['deep_learning_metric']
-
-        cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin',
-                                'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
+        # As Arzucan Ozgur said we would focus antibiotics which are annotated in expanded dataset(dataset-i + dataset-ii)
+        cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide']
