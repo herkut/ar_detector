@@ -89,9 +89,9 @@ class ModelManager:
                                                      Config.target_drugs[i],
                                                      class_weights=class_weights)
                 # train the model
-                self.train_ar_detector(ar_detector,
-                                       x_train,
-                                       y_train)
+                self.tune_hyperparameters_for_ar_detector(ar_detector,
+                                                          x_train,
+                                                          y_train)
                 # test the model
                 ar_detector = ARDetectorBySVMWithRBF(feature_selection,
                                                      Config.target_drugs[i],
@@ -109,9 +109,9 @@ class ModelManager:
                                                         Config.target_drugs[i],
                                                         class_weights=class_weights)
                 # train the model
-                self.train_ar_detector(ar_detector,
-                                       x_train,
-                                       y_train)
+                self.tune_hyperparameters_for_ar_detector(ar_detector,
+                                                          x_train,
+                                                          y_train)
                 # test the model
                 ar_detector = ARDetectorBySVMWithLinear(feature_selection,
                                                         Config.target_drugs[i],
@@ -130,9 +130,9 @@ class ModelManager:
                                                        Config.target_drugs[i],
                                                        class_weights=class_weights)
                 # train the model
-                self.train_ar_detector(ar_detector,
-                                       x_train,
-                                       y_train)
+                self.tune_hyperparameters_for_ar_detector(ar_detector,
+                                                          x_train,
+                                                          y_train)
                 # test the model
                 ar_detector = ARDetectorByRandomForest(feature_selection,
                                                        Config.target_drugs[i],
@@ -151,9 +151,9 @@ class ModelManager:
                                                              Config.target_drugs[i],
                                                              class_weights=class_weights)
                 # train the model
-                self.train_ar_detector(ar_detector,
-                                       x_train,
-                                       y_train)
+                self.tune_hyperparameters_for_ar_detector(ar_detector,
+                                                          x_train,
+                                                          y_train)
                 # test the model
                 ar_detector = ARDetectorByLogisticRegression(feature_selection,
                                                              Config.target_drugs[i],
@@ -175,9 +175,9 @@ class ModelManager:
                                                 Config.target_drugs[i],
                                                 model_name=dnn_model,
                                                 class_weights=class_weights_numpy)
-                    self.train_ar_detector(ar_detector,
-                                           x_train,
-                                           y_train)
+                    self.tune_hyperparameters_for_ar_detector(ar_detector,
+                                                              x_train,
+                                                              y_train)
 
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
@@ -187,7 +187,7 @@ class ModelManager:
 
         return xx, yy
 
-    def train_ar_detector(self, ar_detector, x_tr, y_tr):
+    def tune_hyperparameters_for_ar_detector(self, ar_detector, x_tr, y_tr):
         if not os.path.exists(os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json')):
             raise Exception('Hyperparameter grid could not be found for ' + ar_detector._model_name + ': ' + os.path.join(Config.hyperparameter_grids_directory, ar_detector._model_name + '.json'))
 
