@@ -140,12 +140,26 @@ class ARDetectorByRandomForest(BaseARDetector):
         if not os.path.exists(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory))
 
-        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'normalized_random_forest_' + self._antibiotic_name + '.png'))
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 'normalized_' + self._model_name + '_' + self._antibiotic_name + '.png'))
 
-        plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
-        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'random_forest_' + self._antibiotic_name + '.png'))
+        plot_confusion_matrix(y_te,
+                              y_pred,
+                              classes=['susceptible', 'resistant'],
+                              normalize=False,
+                              title='Confusion matrix')
+
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 self._model_name + '_' + self._antibiotic_name + '.png'))
 
         y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
-        df_confusion.to_csv(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'rf_' + self._antibiotic_name + '.csv'))
+        df_confusion.to_csv(os.path.join(self._results_directory,
+                                         'confusion_matrices',
+                                         self._target_directory,
+                                         self._model_name + '_' + self._antibiotic_name + '.csv'))

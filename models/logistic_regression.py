@@ -94,7 +94,7 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         y_pred = self._best_model.predict(x_te)
 
         cm = confusion_matrix(y_te, y_pred)
-        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
+        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2 :
             sensitivity = float(cm[0][0]) / np.sum(cm[0])
             specificity = float(cm[1][1]) / np.sum(cm[1])
             print('For ' + self._antibiotic_name)
@@ -110,13 +110,26 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         if not os.path.exists(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory))
 
-        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'normalized_lr_' + self._antibiotic_name + '.png'))
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 'normalized_' + self._model_name + '_' + self._antibiotic_name + '.png'))
 
-        plot_confusion_matrix(y_te, y_pred, classes=['susceptible', 'resistant'], normalize=False, title='Confusion matrix')
+        plot_confusion_matrix(y_te,
+                              y_pred,
+                              classes=['susceptible', 'resistant'],
+                              normalize=False,
+                              title='Confusion matrix')
 
-        plt.savefig(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'lr_' + self._antibiotic_name + '.png'))
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 self._model_name + '_' + self._antibiotic_name + '.png'))
 
         y_true = pd.Series(y_te, name="Actual")
         y_pred = pd.Series(y_pred, name="Predicted")
         df_confusion = pd.crosstab(y_true, y_pred)
-        df_confusion.to_csv(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory, 'lr_' + self._antibiotic_name + '.csv'))
+        df_confusion.to_csv(os.path.join(self._results_directory,
+                                         'confusion_matrices',
+                                         self._target_directory,
+                                         self._model_name + '_' + self._antibiotic_name + '.csv'))
