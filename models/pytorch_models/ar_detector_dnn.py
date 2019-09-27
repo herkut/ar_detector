@@ -9,59 +9,10 @@ from torch.nn import BCELoss
 
 from config import Config
 from models.base_ar_detector import BaseARDetector
+from models.pytorch_models.early_stopping import EarlyStopping
 from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports
 from utils.helper_functions import get_k_fold_validation_indices, create_hyperparameter_space
 from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
-
-
-class EarlyStopping(object):
-    def __init__(self, metric='loss', mode='min', min_delta=0, patience=10, checkpoint_file='/tmp/dnn_checkpoint.pt'):
-        """
-
-        :param metric: loss, accuracy, f1, sensitivity, specificity, precision
-        :param mode:
-        :param min_delta:
-        :param patience: how many bad epochs is required to stop early
-        """
-        self.metric = metric
-        self.mode = mode
-        self.min_delta = min_delta
-        self.patience = patience
-        self.bad_epoch_count = 0
-        self.best_index = None
-        self.best_metrics = None
-        self.best_model = None
-
-        self.checkpoint_file = checkpoint_file
-
-    def step(self, epoch, results, model):
-        # From Goodfellow's Deep Learning book
-        if self.best_index is None:
-            self.best_index = epoch
-            self.best_metrics = results
-        else:
-            if self.mode == 'min':
-                if self.best_metrics[self.metric] - results[self.metric] > self.min_delta:
-                    # Update best metrics and save checkpoint
-                    self.save_checkpoint(epoch, results, model)
-                else:
-                    self.bad_epoch_count += 1
-            else:
-                if self.best_metrics[self.metric] - results[self.metric] < self.min_delta:
-                    # Update best metrics and save checkpoint
-                    self.save_checkpoint(epoch, results, model)
-                else:
-                    self.bad_epoch_count += 1
-            if self.bad_epoch_count > self.patience:
-                return True
-            else:
-                return False
-
-    def save_checkpoint(self, epoch, results, model):
-        self.best_index = epoch
-        self.best_metrics = results
-        self.bad_epoch_count = 0
-        torch.save(model.state_dict(), self.checkpoint_file)
 
 
 class FeetForwardNetwork(torch.nn.Module):
@@ -154,7 +105,7 @@ class FeetForwardNetwork(torch.nn.Module):
                 x = self.dos[i](x)
 
         out = self.predict(x)
-        out = self.softmax(out)
+        out = self.softmax(out + 1e-10)
         return out
 
     def get_name(self):
@@ -175,8 +126,8 @@ def prepare_dataloaders(batch_size, x_tr, y_tr, train_indices, validation_indice
     y_val_tensor = torch.from_numpy(y_tr[validation_indices]).long()
 
     # convert labels into one hot encoded
-    y_tr_one_hot = torch.nn.functional.one_hot(y_tr_tensor.to(torch.long), num_classes=2)
-    y_val_one_hot = torch.nn.functional.one_hot(y_val_tensor.to(torch.long), num_classes=2)
+    # y_tr_one_hot = torch.nn.functional.one_hot(y_tr_tensor.to(torch.long), num_classes=2)
+    # y_val_one_hot = torch.nn.functional.one_hot(y_val_tensor.to(torch.long), num_classes=2)
 
     # create dataset and dataloader
     ar_dataset_tr = utils.TensorDataset(x_tr_tensor, y_tr_tensor)
@@ -284,7 +235,7 @@ class ARDetectorDNN(BaseARDetector):
 
                     if es.step(epoch, validation_results, model):
                         # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
-                        print('Best metrics: ' + str(es.best_metrics))
+                        print('Epoch: ' + str(epoch) + ', best metrics: ' + str(es.best_metrics))
                         break
 
                     # print('[%d] training loss: %.9f' % (epoch + 1, training_results['loss']))
@@ -305,11 +256,13 @@ class ARDetectorDNN(BaseARDetector):
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
 
-        # TODO store cv_results json in related results directory
-        if not os.path.exists(os.path.join(Config.results_directory, 'best_models', self._target_directory)):
-            os.makedirs(os.path.join(Config.results_directory, 'best_models', self._target_directory))
+        if not os.path.exists(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory))
 
-        with open(os.path.join(Config.results_directory, 'best_models', self._target_directory, self._model_name + '.json'), 'w') as fp:
+        with open(os.path.join(Config.results_directory,
+                               'grid_search_scores',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
             json.dump(cv_results, fp)
 
     def predict_ar(self, x):
