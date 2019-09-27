@@ -8,6 +8,37 @@ def cochrans_q_test():
     pass
 
 
+def compare_hyperparameters_wrt_corrected_1xkcv_t_test(res1, res2, metric='accuracy'):
+    r = 1
+    k = len(res1)
+
+    p_mat = np.zeros((r, k))
+    # calculating variance estimates
+    for tmp_r in range(0, r):
+        for tmp_k in range(0, k):
+            # p_mat[r][k] = res1[metric][r][k] - res2[metric][r][k]
+            p_mat[tmp_r][tmp_k] = res1[tmp_k][metric] - res2[tmp_k][metric]
+    m = np.mean(p_mat)
+    s_sq = (1 / (r * k)) * np.sum(np.square(p_mat - m))
+
+    # Prevent divisor to be zero
+    t = ((1 / (r * k)) * np.sum(p_mat)) / (np.sqrt(s_sq * (1 / (r * k) + (1 / (k - 1)))) if s_sq > 0 else 1)
+    # print("t estimation: " + str(t) + ' and t value with 95 confidence interval: (+/-)' + str(stats.t.ppf(1 - 0.025, r * k - 1)))
+
+    if t > stats.t.ppf(1 - 0.025, r * k - 1) or t < -stats.t.ppf(1 - 0.025, r * k - 1):
+        if t < 0:
+            # model 2 is better
+            return t, -1
+        elif t > 0:
+            # model 1 is better
+            return t, 1
+        else:
+            print('Boss, we have an issue')
+    else:
+        # print('Models are not significantly different')
+        return t, 0
+
+
 def compare_models_wrt_kfold_cross_validated_paired_t_test(arr1, arr2):
     k = len(arr1)
 
@@ -30,7 +61,7 @@ def compare_models_wrt_kfold_cross_validated_paired_t_test(arr1, arr2):
         return 0
 
 
-def choose_best_hyperparameters(json_containing_cross_validation_results):
+def choose_best_hyperparameters_from_json(json_containing_cross_validation_results):
     d = json.load(json_containing_cross_validation_results)
     best_hyperparameter_id = 0
     for i in range(1, len(d['results'])):
@@ -44,6 +75,25 @@ def choose_best_hyperparameters(json_containing_cross_validation_results):
     print(d['parameters'][best_hyperparameter_id])
 
     return best_hyperparameter_id
+
+
+def choose_best_hyperparameters(cv_results, metric='f1'):
+    # TODO make hyperparameters comparing methods generic (rxkcv)
+    best_hyperparameter_id = 0
+    for i in range(1, len(cv_results['grids'])):
+        print('Comparing: ')
+        print(cv_results['grids'][best_hyperparameter_id])
+        print(cv_results['grids'][i])
+        _, res = compare_hyperparameters_wrt_corrected_1xkcv_t_test(cv_results['validation_results'][best_hyperparameter_id],
+                                                                    cv_results['validation_results'][i],
+                                                                    metric=metric)
+        if res == -1:
+            best_hyperparameter_id = i
+
+    print('Best hyperparameter index: ' + str(best_hyperparameter_id))
+    print(cv_results['grids'][best_hyperparameter_id])
+
+    return cv_results['grids'][best_hyperparameter_id]
 
 
 def compare_models_wrt_5x2cv_paired_t_test(results_model1, results_model2, metric='f1'):

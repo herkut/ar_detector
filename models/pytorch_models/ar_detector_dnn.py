@@ -12,7 +12,7 @@ from models.base_ar_detector import BaseARDetector
 from models.pytorch_models.early_stopping import EarlyStopping
 from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports
 from utils.helper_functions import get_k_fold_validation_indices, create_hyperparameter_space
-from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
+from utils.statistical_tests.statistical_tests import choose_best_hyperparameters_from_json
 
 
 class FeetForwardNetwork(torch.nn.Module):
@@ -233,13 +233,14 @@ class ARDetectorDNN(BaseARDetector):
                     # Validation
                     validation_results = self._validate_model(model, criterion, ar_dataloader_val)
 
+                    print('[%d] training loss: %.9f' % (epoch + 1, training_results['loss']))
+                    print('[%d] validation loss: %.9f' % (epoch + 1, validation_results['loss']))
+
                     if es.step(epoch, validation_results, model):
                         # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
-                        print('Epoch: ' + str(epoch) + ', best metrics: ' + str(es.best_metrics))
+                        print('Epoch: ' + str(es.best_index) + ', best metrics: ' + str(es.best_metrics))
                         break
 
-                    # print('[%d] training loss: %.9f' % (epoch + 1, training_results['loss']))
-                    # print('[%d] validation loss: %.9f' % (epoch + 1, validation_results['loss']))
                 # Training has been completed, get training and validation classification report
                 # load best model and validate with training and validation test set
                 model = FeetForwardNetwork(feature_size,
@@ -264,6 +265,9 @@ class ARDetectorDNN(BaseARDetector):
                                self._target_directory,
                                self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
             json.dump(cv_results, fp)
+
+
+
 
     def predict_ar(self, x):
         self._model.eval()
@@ -344,3 +348,6 @@ class ARDetectorDNN(BaseARDetector):
                 validation_results = concatenate_classification_reports(validation_results,
                                                                         tmp_classification_report)
         return validation_results
+
+    def train_best_model(self, x_tr, y_tr, x_te, y_te):
+        pass
