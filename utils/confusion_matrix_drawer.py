@@ -1,6 +1,74 @@
+import torch
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
+
+
+def concatenate_classification_reports(report1, report2):
+    results = {}
+
+    TP = report1['TP'] + report2['TP']
+    FP = report1['FP'] + report2['FP']
+    TN = report1['TN'] + report2['TN']
+    FN = report1['FN'] + report2['FN']
+
+    results['TP'] = TP
+    results['FP'] = FP
+    results['TN'] = TN
+    results['FN'] = FN
+    results['sensitivity/recall'] = TP / ((TP + FN) if (TP + FN) > 0 else 1)
+    results['specificity'] = TN / ((TN + FP) if (TN + FP) > 0 else 1)
+    results['precision'] = TP / ((TP + FP) if (TP + FP) > 0 else 1)
+    results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
+    results['f1'] = 2 * TP / ((2 * TP + FP + FN) if (TP + FP + FN) > 0 else 1)    
+
+    return results
+
+
+def get_class_from_probability(y_pred):
+    return 1 if torch.sigmoid(y_pred) > 0.5 else 0
+
+
+def classification_report(y_true, y_pred):
+    results = {}
+
+    TP = 0
+    FP = 0
+    TN = 0
+    FN = 0
+
+    if isinstance(y_true, torch.Tensor) and isinstance(y_pred, torch.Tensor):
+        for i in range(len(y_pred)):
+            if y_true[i] == y_pred[i] == 1:
+                TP += 1
+            if y_pred[i] == 1 and y_true[i] != y_pred[i]:
+                FP += 1
+            if y_true[i] == y_pred[i] == 0:
+                TN += 1
+            if y_pred[i] == 0 and y_true[i] != y_pred[i]:
+                FN += 1
+    else:
+        for i in range(len(y_pred)):
+            if y_true[i] == y_pred[i] == 1:
+                TP += 1
+            if y_pred[i] == 1 and y_true[i] != y_pred[i]:
+                FP += 1
+            if y_true[i] == y_pred[i] == 0:
+                TN += 1
+            if y_pred[i] == 0 and y_true[i] != y_pred[i]:
+                FN += 1
+
+    results['TP'] = TP
+    results['FP'] = FP
+    results['TN'] = TN
+    results['FN'] = FN
+    results['sensitivity/recall'] = TP / ((TP + FN) if (TP + FN) > 0 else 1)
+    results['specificity'] = TN / ((TN + FP) if (TN + FP) > 0 else 1)
+    results['precision'] = TP / ((TP + FP) if (TP + FP) > 0 else 1)
+    results['accuracy'] = (TP + TN) / (TP + FN + TN + FP)
+    results['f1'] = 2 * TP / ((2 * TP + FP + FN) if (TP + FP + FN) > 0 else 1)
+
+    return results
 
 
 def plot_confusion_matrix(y_true, y_pred, classes,
@@ -46,7 +114,7 @@ def plot_confusion_matrix(y_true, y_pred, classes,
              rotation_mode="anchor")
 
     # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
+    fmt = '.4f' if normalize else 'd'
     thresh = cm.max() / 2.
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):

@@ -1,9 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.externals import joblib
 
-from models.random_forest import ARDetectorByRandomForest
-from models.svm_rbf import ARDetectorBySVMWithRBF
 
 ######################################################################################
 BASE_DIRECTORY='/run/media/herkut/herkut/TB_genomes/'
@@ -11,11 +8,6 @@ BASE_DIRECTORY='/run/media/herkut/herkut/TB_genomes/'
 FEATURE_MATRIX_DIRECTORY = BASE_DIRECTORY + 'ar_detection_dataset/'
 
 FEATURE_MATRIX_FILE_PREFIX = 'feature_matrix_'
-#FEATURE_SELECTION = '09_without_unique_mutations'
-#FEATURE_SELECTION = '09_with_all_mutations'
-#FEATURE_SELECTION = 'like_baseline_without_unique_mutations'
-#FEATURE_SELECTION = 'like_baseline_with_all_mutations'
-#FEATURE_MATRIX_FILE = FEATURE_MATRIX_FILE_PREFIX + FEATURE_SELECTION + '.csv'
 
 LABELS_DIRECTORY = BASE_DIRECTORY + 'ar_detection_dataset/'
 LABELS_FILE = 'labels.csv'
@@ -31,8 +23,6 @@ IGNORE_EMPTY_ROWS = False
 ENABLE_SVM = True
 ENABLE_RF = False
 ENABLE_DNN = False
-
-TRADITIONAL_ML_SCORING = 'f1'
 ######################################################################################
 
 
@@ -146,9 +136,36 @@ class FeatureLabelPreparer:
 
         return feature_matrix_training, labels_matrix_training, feature_matrix_test, labels_matrix_test
 
+    @staticmethod
+    def get_feature_matrix_from_files(feature_files):
+        raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0)
+        # print(raw_feature_matrix.shape)
+        for i in range(1, len(feature_files)):
+            tmp_feature_matrix = pd.read_csv(feature_files[i], index_col=0)
+            # print(tmp_feature_matrix.shape)
+            for column in tmp_feature_matrix.columns:
+                if column in raw_feature_matrix.columns:
+                    for i in raw_feature_matrix.index:
+                        if raw_feature_matrix.at[i, column] == 0 and tmp_feature_matrix.at[i, column] == 1:
+                            raw_feature_matrix.at[i, column] = 1
+                else:
+                    raw_feature_matrix[column] = tmp_feature_matrix[column]
+
+        # print(raw_feature_matrix.shape)
+        return raw_feature_matrix
+
+    @staticmethod
+    def get_labels_from_file(file_containing_labels):
+        labels = pd.read_csv(file_containing_labels, index_col=0)
+        return labels
+
 
 def main():
-    pass
+    tmp_arr = ['/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/snp_bcftools_0.9_notunique.csv', '/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/new_approach/indel_platypus_0.0_all.csv']
+    raw_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(tmp_arr, use_tfidf=True)
+    labels = FeatureLabelPreparer.get_labels_from_file('/run/media/herkut/hdd-1/TB_genomes/ar_detection_dataset/labels.csv')
+
+    print('Zaa')
 
 
 if __name__ == '__main__':
