@@ -43,7 +43,7 @@ def classification_report(y_true, y_pred):
                 TP += 1
             if y_pred[i] == 1 and y_true[i] != y_pred[i]:
                 FP += 1
-            if y_true[i] == y_pred[0] == 0:
+            if y_true[i] == y_pred[i] == 0:
                 TN += 1
             if y_pred[i] == 0 and y_true[i] != y_pred[i]:
                 FN += 1

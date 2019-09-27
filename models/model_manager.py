@@ -172,12 +172,16 @@ class ModelManager:
                 class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
                 for dnn_model in self.dnn_models:
                     ar_detector = ARDetectorDNN(feature_selection,
-                                                Config.target_drugs[i],
+                                                antibiotic_name=Config.target_drugs[i],
                                                 model_name=dnn_model,
+                                                feature_size=x_train.shape[1],
                                                 class_weights=class_weights_numpy)
                     self.tune_hyperparameters_for_ar_detector(ar_detector,
                                                               x_train,
                                                               y_train)
+                    self.train_best_model(ar_detector, x_train, y_train, x_test, y_test)
+
+                    self.test_ar_detector(ar_detector, x_test, y_test)
 
     def filter_out_nan(self, x, y):
         index_to_remove = y[y.isna() == True].index
@@ -200,6 +204,15 @@ class ModelManager:
         ar_detector.tune_hyperparameters(param_grid, x_tr, y_tr)
 
         print(ar_detector._best_model)
+
+    def train_best_model(self, ar_detector, x_tr, y_tr, x_te, y_te):
+        with open(os.path.join(Config.results_directory,
+                               'best_models',
+                               ar_detector._target_directory,
+                               ar_detector._model_name + '_' + ar_detector._antibiotic_name + '.json')) as fp:
+            best_hyperparameters = json.load(fp)
+
+        ar_detector.train_best_model(best_hyperparameters, x_tr, y_tr, x_te, y_te)
 
     def test_ar_detector(self, ar_detector, x_te, y_te):
         print('Test ' + str(x_te.shape) + ' ' + str(y_te.shape))
