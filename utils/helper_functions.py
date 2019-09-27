@@ -41,7 +41,7 @@ def get_k_fold_validation_indices(k, X, y):
     return skf.split(X, y)
 
 
-def create_hyperparameter_space(param_grid):
+def create_hyperparameter_space_for_dnn(param_grid):
     hyperparameter_space = []
     for optimizer_param in param_grid['optimizers']:
         for lr in param_grid['learning_rates']:
