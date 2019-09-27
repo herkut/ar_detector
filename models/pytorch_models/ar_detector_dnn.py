@@ -1,18 +1,19 @@
+import collections
 import json
 import os
 
 import torch
 import torch.utils.data as utils
-
+from sklearn.metrics import confusion_matrix
 import numpy as np
-from torch.nn import BCELoss
-
+import pandas as pd
+import matplotlib.pyplot as plt
 from config import Config
 from models.base_ar_detector import BaseARDetector
 from models.pytorch_models.early_stopping import EarlyStopping
-from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports
+from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports, plot_confusion_matrix
 from utils.helper_functions import get_k_fold_validation_indices, create_hyperparameter_space
-from utils.statistical_tests.statistical_tests import choose_best_hyperparameters_from_json
+from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
 
 
 class FeetForwardNetwork(torch.nn.Module):
@@ -112,37 +113,32 @@ class FeetForwardNetwork(torch.nn.Module):
         return 'dnn-' + str(len(self.fcs)) + 'd'
 
 
-def prepare_dataloaders(batch_size, x_tr, y_tr, train_indices, validation_indices):
+def prepare_dataloader(batch_size, x, y):
     # numpy matrix -> torch tensors
-    x_tr_tensor = torch.from_numpy(x_tr[train_indices]).float()
+    x_tensor = torch.from_numpy(x).float()
     # numpy array -> numpy matrix (len, 1)
     # y_tr[validation_indices].reshape(y_tr[validation_indices].shape[0], -1)
-    y_tr_tensor = torch.from_numpy(y_tr[train_indices]).long()
-
-    # numpy matrix -> torch tensors
-    x_val_tensor = torch.from_numpy(x_tr[validation_indices]).float()
-    # numpy array -> numpy matrix (len, 1)
-    # y_tr[validation_indices].reshape(y_tr[validation_indices].shape[0], -1)
-    y_val_tensor = torch.from_numpy(y_tr[validation_indices]).long()
+    y_tensor = torch.from_numpy(y).long()
 
     # convert labels into one hot encoded
     # y_tr_one_hot = torch.nn.functional.one_hot(y_tr_tensor.to(torch.long), num_classes=2)
     # y_val_one_hot = torch.nn.functional.one_hot(y_val_tensor.to(torch.long), num_classes=2)
 
     # create dataset and dataloader
-    ar_dataset_tr = utils.TensorDataset(x_tr_tensor, y_tr_tensor)
-    ar_dataloader_tr = utils.DataLoader(ar_dataset_tr, batch_size=batch_size)
-    ar_dataset_val = utils.TensorDataset(x_val_tensor, y_val_tensor)
-    ar_dataloader_val = utils.DataLoader(ar_dataset_val, batch_size=batch_size)
+    ar_dataset = utils.TensorDataset(x_tensor, y_tensor)
+    ar_dataloader = utils.DataLoader(ar_dataset, batch_size=batch_size)
 
-    return ar_dataloader_tr, ar_dataloader_val
+    return ar_dataloader
 
 
 class ARDetectorDNN(BaseARDetector):
-    def __init__(self, feature_selection, antibiotic_name=None, model_name='dnn', class_weights=None):
+    def __init__(self, feature_selection, feature_size=None, antibiotic_name=None, model_name='dnn', class_weights=None):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
+        self._feature_size = feature_size
         self._label_tags = Config.label_tags
+
+        self._batch_size = 64
 
         self._model = None
         self._best_model = None
@@ -156,126 +152,6 @@ class ARDetectorDNN(BaseARDetector):
         self._model_name = model_name
         self._class_weights = class_weights[:, 1]
         self._target_directory = self._model_name + '_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
-
-    def save_model(self):
-        pass
-
-    def load_model(self):
-        pass
-
-    def tune_hyperparameters(self, param_grid, x_tr, y_tr):
-        batch_size = 64
-        # x_tr[0] sample counts x_tr[1] feature size
-        feature_size = x_tr.shape[1]
-
-        # grid search
-        hyperparameter_space = create_hyperparameter_space(param_grid)
-
-        cv_results = {'grids': [], 'training_results': [], 'validation_results': []}
-        for grid in hyperparameter_space:
-            cv_results['grids'].append(grid)
-            cv_result = {'training_results': [], 'validation_results': []}
-
-            # prepare data for closs validation
-            k_fold_indices = get_k_fold_validation_indices(10, x_tr, y_tr)
-            print('Grid: ' + str(grid))
-            for train_indeces, validation_indeces in k_fold_indices:
-                # initialization of dataloaders
-                ar_dataloader_tr, ar_dataloader_val = prepare_dataloaders(batch_size, x_tr, y_tr, train_indeces, validation_indeces)
-
-                # initialization of the model
-                model = FeetForwardNetwork(feature_size,
-                                           2,
-                                           grid['hidden_units'],
-                                           grid['activation_functions'],
-                                           grid['dropout_rate'],
-                                           batch_normalization=True)
-
-                # put model into gpu if exists
-                model.to(self._device)
-                # initialization completed
-
-                # Optimizer initialization
-                # class weight is used to handle unbalanced data
-                # BCEWithLogitsLoss = Sigmoid->BCELoss
-                # CrossEntropyLoss = LogSoftmax->NLLLoss
-                criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights).to(self._device))
-                if grid['optimizer'] == 'Adam':
-                    optimizer = torch.optim.Adam(model.parameters(), lr=grid['learning_rate'])
-                elif grid['optimizer'] == 'SGD':
-                    optimizer = torch.optim.SGD(model.parameters(), lr=grid['learning_rate'])
-                elif grid['optimizer'] == 'Adamax':
-                    optimizer = torch.optim.Adamax(model.parameters(), lr=grid['learning_rate'])
-                elif grid['optimizer'] == 'RMSProp':
-                    optimizer = torch.optim.RMSProp(model.parameters(), lr=grid['learning_rate'])
-                else:
-                    raise Exception('Not implemented optimizer: ' + grid['optimizer'])
-                # Optimizer initialization completed
-
-                # create the directory holding checkpoints if not exists
-                if not os.path.exists(os.path.join(Config.results_directory, 'checkpoints')):
-                    os.makedirs(os.path.join(Config.results_directory, 'checkpoints'))
-
-                es = EarlyStopping(metric='loss',
-                                   mode='min',
-                                   patience=10,
-                                   checkpoint_file=os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt'))
-
-                for epoch in range(2000):
-                    model.train()
-
-                    training_results = None
-                    validation_results = None
-
-                    # Training
-                    training_results = self._training_step(model, optimizer, criterion, ar_dataloader_tr)
-
-                    # Validation
-                    validation_results = self._validate_model(model, criterion, ar_dataloader_val)
-
-                    print('[%d] training loss: %.9f' % (epoch + 1, training_results['loss']))
-                    print('[%d] validation loss: %.9f' % (epoch + 1, validation_results['loss']))
-
-                    if es.step(epoch, validation_results, model):
-                        # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
-                        print('Epoch: ' + str(es.best_index) + ', best metrics: ' + str(es.best_metrics))
-                        break
-
-                # Training has been completed, get training and validation classification report
-                # load best model and validate with training and validation test set
-                model = FeetForwardNetwork(feature_size,
-                                           2,
-                                           grid['hidden_units'],
-                                           grid['activation_functions'],
-                                           grid['dropout_rate'],
-                                           batch_normalization=True)
-                model.load_state_dict(torch.load(os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt')))
-                model.to(self._device)
-                model.eval()
-                cv_result['training_results'].append(self._calculate_model_performance(model, ar_dataloader_tr))
-                cv_result['validation_results'].append(self._calculate_model_performance(model, ar_dataloader_val))
-            cv_results['training_results'].append(cv_result['training_results'])
-            cv_results['validation_results'].append(cv_result['validation_results'])
-
-        if not os.path.exists(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory)):
-            os.makedirs(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory))
-
-        with open(os.path.join(Config.results_directory,
-                               'grid_search_scores',
-                               self._target_directory,
-                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
-            json.dump(cv_results, fp)
-
-
-
-
-    def predict_ar(self, x):
-        self._model.eval()
-        return self._model.forward(x)
-
-    def test_model(self, x_te, y_te):
-        self._model.eval()
-        pass
 
     def _training_step(self, model, optimizer, criterion, dataloader):
         training_results = None
@@ -349,5 +225,275 @@ class ARDetectorDNN(BaseARDetector):
                                                                         tmp_classification_report)
         return validation_results
 
-    def train_best_model(self, x_tr, y_tr, x_te, y_te):
+    def save_model(self):
         pass
+
+    def load_model(self):
+        with open(os.path.join(Config.results_directory,
+                               'best_models',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json')) as fp:
+            best_hyperparameters = json.load(fp)
+
+        model = FeetForwardNetwork(self._feature_size,
+                                   2,
+                                   best_hyperparameters['hidden_units'],
+                                   best_hyperparameters['activation_functions'],
+                                   best_hyperparameters['dropout_rate'],
+                                   batch_normalization=True)
+        model.load_state_dict(torch.load(os.path.join(Config.results_directory,
+                                                      'best_models',
+                                                      self._target_directory,
+                                                      self._model_name + '_for_' + self._antibiotic_name + '.pt')))
+        model.to(self._device)
+        model.eval()
+
+        self._best_model = model
+
+    def tune_hyperparameters(self, param_grid, x_tr, y_tr):
+        batch_size = 64
+        # x_tr[0] sample counts x_tr[1] feature size
+        feature_size = x_tr.shape[1]
+
+        # grid search
+        hyperparameter_space = create_hyperparameter_space(param_grid)
+
+        cv_results = {'grids': [], 'training_results': [], 'validation_results': []}
+        for grid in hyperparameter_space:
+            cv_results['grids'].append(grid)
+            cv_result = {'training_results': [], 'validation_results': []}
+
+            # prepare data for closs validation
+            k_fold_indices = get_k_fold_validation_indices(10, x_tr, y_tr)
+            print('Grid: ' + str(grid))
+            for train_indeces, validation_indeces in k_fold_indices:
+                # initialization of dataloaders
+                dataloader_tr = prepare_dataloader(self._batch_size, x_tr[train_indeces], y_tr[train_indeces])
+                dataloader_val = prepare_dataloader(self._batch_size, x_tr[validation_indeces], y_tr[validation_indeces])
+
+                # initialization of the model
+                model = FeetForwardNetwork(feature_size,
+                                           2,
+                                           grid['hidden_units'],
+                                           grid['activation_functions'],
+                                           grid['dropout_rate'],
+                                           batch_normalization=True)
+
+                # put model into gpu if exists
+                model.to(self._device)
+                # initialization completed
+
+                # Optimizer initialization
+                # class weight is used to handle unbalanced data
+                # BCEWithLogitsLoss = Sigmoid->BCELoss
+                # CrossEntropyLoss = LogSoftmax->NLLLoss
+                criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights).to(self._device))
+                if grid['optimizer'] == 'Adam':
+                    optimizer = torch.optim.Adam(model.parameters(), lr=grid['learning_rate'])
+                elif grid['optimizer'] == 'SGD':
+                    optimizer = torch.optim.SGD(model.parameters(), lr=grid['learning_rate'])
+                elif grid['optimizer'] == 'Adamax':
+                    optimizer = torch.optim.Adamax(model.parameters(), lr=grid['learning_rate'])
+                elif grid['optimizer'] == 'RMSProp':
+                    optimizer = torch.optim.RMSProp(model.parameters(), lr=grid['learning_rate'])
+                else:
+                    raise Exception('Not implemented optimizer: ' + grid['optimizer'])
+                # Optimizer initialization completed
+
+                # create the directory holding checkpoints if not exists
+                if not os.path.exists(os.path.join(Config.results_directory, 'checkpoints')):
+                    os.makedirs(os.path.join(Config.results_directory, 'checkpoints'))
+
+                es = EarlyStopping(metric='loss',
+                                   mode='min',
+                                   patience=10,
+                                   checkpoint_file=os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt'))
+
+                for epoch in range(2000):
+                    model.train()
+
+                    training_results = None
+                    validation_results = None
+
+                    # Training
+                    training_results = self._training_step(model, optimizer, criterion, dataloader_tr)
+
+                    # Validation
+                    validation_results = self._validate_model(model, criterion, dataloader_val)
+
+                    print('[%d] training loss: %.9f' % (epoch, training_results['loss']))
+                    print('[%d] validation loss: %.9f' % (epoch, validation_results['loss']))
+
+                    if es.step(epoch, validation_results, model):
+                        # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
+                        print('Epoch: ' + str(es.best_index) + ', best metrics: ' + str(es.best_metrics))
+                        break
+
+                # Training has been completed, get training and validation classification report
+                # load best model and validate with training and validation test set
+                model = FeetForwardNetwork(feature_size,
+                                           2,
+                                           grid['hidden_units'],
+                                           grid['activation_functions'],
+                                           grid['dropout_rate'],
+                                           batch_normalization=True)
+                model.load_state_dict(torch.load(os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt')))
+                model.to(self._device)
+                model.eval()
+                cv_result['training_results'].append(self._calculate_model_performance(model, dataloader_tr))
+                cv_result['validation_results'].append(self._calculate_model_performance(model, dataloader_val))
+            cv_results['training_results'].append(cv_result['training_results'])
+            cv_results['validation_results'].append(cv_result['validation_results'])
+
+        if not os.path.exists(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory))
+
+        with open(os.path.join(Config.results_directory,
+                               'grid_search_scores',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
+            json.dump(cv_results, fp)
+
+        best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
+
+        if not os.path.exists(os.path.join(Config.results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(Config.results_directory, 'best_models', self._target_directory))
+
+        with open(os.path.join(Config.results_directory,
+                               'best_models',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
+            json.dump(best_hyperparameters, fp)
+
+    def predict_ar(self, x):
+        self._model.eval()
+        return self._model.forward(x)
+
+    def test_model(self, x_te, y_te):
+        self._best_model.eval()
+
+        dataloader = prepare_dataloader(self._batch_size, x_te, y_te)
+
+        pred = None
+        for i, data in enumerate(dataloader, 0):
+            inputs, labels = data
+            inputs = inputs.to(self._device)
+            labels = labels.to(self._device)
+
+            y_hat = self._best_model(inputs)
+            if pred is None:
+                pred = torch.argmax(y_hat, dim=1)
+            else:
+                pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
+
+        y_pred = pred.numpy()
+
+        cm = confusion_matrix(y_te, y_pred)
+        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
+            sensitivity = float(cm[0][0]) / np.sum(cm[0])
+            specificity = float(cm[1][1]) / np.sum(cm[1])
+            print('For ' + self._antibiotic_name)
+            print(collections.Counter(y_te))
+            print('Sensitivity: ' + str(sensitivity))
+            print('Specificity: ' + str(specificity))
+        else:
+            print('For ' + self._antibiotic_name)
+            print('There has been an error in calculating sensitivity and specificity')
+
+        plot_confusion_matrix(y_te,
+                              y_pred,
+                              classes=['susceptible', 'resistant'],
+                              normalize=True,
+                              title='Normalized confusion matrix')
+
+        if not os.path.exists(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory))
+
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 'normalized_' + self._model_name + '_' + self._antibiotic_name + '.png'))
+
+        plot_confusion_matrix(y_te,
+                              y_pred,
+                              classes=['susceptible', 'resistant'],
+                              normalize=False,
+                              title='Confusion matrix')
+
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 self._model_name + '_' + self._antibiotic_name + '.png'))
+
+        y_true = pd.Series(y_te, name="Actual")
+        y_pred = pd.Series(y_pred, name="Predicted")
+        df_confusion = pd.crosstab(y_true, y_pred)
+        df_confusion.to_csv(os.path.join(self._results_directory,
+                                         'confusion_matrices',
+                                         self._target_directory,
+                                         self._model_name + '_' + self._antibiotic_name + '.csv'))
+
+    def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
+        dataloader_tr = prepare_dataloader(self._batch_size, x_tr, y_tr)
+        dataloader_te = prepare_dataloader(self._batch_size, x_te, y_te)
+
+        # initialization of the model
+        model = FeetForwardNetwork(self._feature_size,
+                                   2,
+                                   hyperparameters['hidden_units'],
+                                   hyperparameters['activation_functions'],
+                                   hyperparameters['dropout_rate'],
+                                   batch_normalization=True)
+
+        # put model into gpu if exists
+        model.to(self._device)
+        # initialization completed
+
+        # Optimizer initialization
+        # class weight is used to handle unbalanced data
+        # BCEWithLogitsLoss = Sigmoid->BCELoss
+        # CrossEntropyLoss = LogSoftmax->NLLLoss
+        criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights).to(self._device))
+        if hyperparameters['optimizer'] == 'Adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters['learning_rate'])
+        elif hyperparameters['optimizer'] == 'SGD':
+            optimizer = torch.optim.SGD(model.parameters(), lr=hyperparameters['learning_rate'])
+        elif hyperparameters['optimizer'] == 'Adamax':
+            optimizer = torch.optim.Adamax(model.parameters(), lr=hyperparameters['learning_rate'])
+        elif hyperparameters['optimizer'] == 'RMSProp':
+            optimizer = torch.optim.RMSProp(model.parameters(), lr=hyperparameters['learning_rate'])
+        else:
+            raise Exception('Not implemented optimizer: ' + hyperparameters['optimizer'])
+        # Optimizer initialization completed
+
+        # create the directory holding checkpoints if not exists
+        if not os.path.exists(os.path.join(Config.results_directory, 'checkpoints')):
+            os.makedirs(os.path.join(Config.results_directory, 'checkpoints'))
+
+        es = EarlyStopping(metric='loss',
+                           mode='min',
+                           patience=10,
+                           checkpoint_file=os.path.join(Config.results_directory,
+                                                        'best_models',
+                                                        self._target_directory,
+                                                        self._model_name + '_' + self._antibiotic_name + '.pt'))
+
+        for epoch in range(2000):
+            model.train()
+
+            training_results = None
+            test_results = None
+
+            # Training
+            training_results = self._training_step(model, optimizer, criterion, dataloader_tr)
+
+            # Validation
+            test_results = self._validate_model(model, criterion, dataloader_te)
+
+            print('[%d] training loss: %.9f' % (epoch, training_results['loss']))
+            print('[%d] test loss: %.9f' % (epoch, test_results['loss']))
+
+            if es.step(epoch, test_results, model):
+                # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
+                print('Epoch: ' + str(es.best_index) + ', best metrics: ' + str(es.best_metrics))
+                break
