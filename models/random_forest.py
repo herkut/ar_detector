@@ -32,13 +32,14 @@ class ARDetectorByRandomForest(BaseARDetector):
         self._best_model = None
         self._antibiotic_name = antibiotic_name
         self._scoring = Config.traditional_ml_scoring
+        self._class_weights = class_weights
         self._target_directory = 'rf_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
     def set_antibiotic_name(self, antibiotic_name):
         self._antibiotic_name = antibiotic_name
 
-    def reinitialize_model_with_parameters(self, parameters, class_weights=None):
-        if class_weights is None:
+    def reinitialize_model_with_parameters(self, parameters):
+        if self._class_weights is None:
             if ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)) \
                     and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
                 self._model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
@@ -63,28 +64,77 @@ class ARDetectorByRandomForest(BaseARDetector):
                     and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
                 self._model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
                                                      max_features=parameters['max_features'],
-                                                     class_weight=class_weights)
+                                                     class_weight=self._class_weights)
             elif ('bootstrap' in parameters and parameters['bootstrap'] is not None) \
                     and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
                 self._model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
                                                      max_features=parameters['max_features'],
                                                      bootstrap=parameters['bootstrap'],
-                                                     class_weight=class_weights)
+                                                     class_weight=self._class_weights)
             elif ('max_depth' in parameters and parameters['max_depth'] is not None) \
                     and ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)):
                 self._model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
                                                      max_features=parameters['max_features'],
                                                      max_depth=parameters['max_depth'],
-                                                     class_weight=class_weights)
+                                                     class_weight=self._class_weights)
             else:
                 self._model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
                                                      max_features=parameters['max_features'],
                                                      bootstrap=parameters['bootstrap'],
                                                      max_depth=parameters['max_depth'],
-                                                     class_weight=class_weights)
+                                                     class_weight=self._class_weights)
+
+    def reinitialize_best_model_with_parameters(self, parameters):
+        if self._class_weights is None:
+            if ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)) \
+                    and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'])
+            elif ('bootstrap' in parameters and parameters['bootstrap'] is not None) \
+                    and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     bootstrap=str2bool(parameters['bootstrap']))
+            elif ('max_depth' in parameters and parameters['max_depth'] is not None) \
+                    and ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)):
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     max_depth=parameters['max_depth'])
+            else:
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     bootstrap=str2bool(parameters['bootstrap']),
+                                                     max_depth=parameters['max_depth'])
+        else:
+            if ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)) \
+                    and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     class_weight=self._class_weights)
+            elif ('bootstrap' in parameters and parameters['bootstrap'] is not None) \
+                    and ('max_depth' not in parameters or ('max_depth' in parameters and parameters['max_depth'] is None)):
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     bootstrap=parameters['bootstrap'],
+                                                     class_weight=self._class_weights)
+            elif ('max_depth' in parameters and parameters['max_depth'] is not None) \
+                    and ('bootstrap' not in parameters or ('bootstrap' in parameters and parameters['bootstrap'] is None)):
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     max_depth=parameters['max_depth'],
+                                                     class_weight=self._class_weights)
+            else:
+                self._best_model = RandomForestClassifier(n_estimators=parameters['n_estimators'],
+                                                     max_features=parameters['max_features'],
+                                                     bootstrap=parameters['bootstrap'],
+                                                     max_depth=parameters['max_depth'],
+                                                     class_weight=self._class_weights)
 
     def load_model(self):
-        self._best_model = joblib.load(os.path.join(self._results_directory, 'best_models', self._target_directory, 'random_forest_model_for_' + self._antibiotic_name + '.sav'))
+        self._best_model = joblib.load(os.path.join(self._results_directory,
+                                                    'best_models',
+                                                    self._target_directory,
+                                                    self._model_name + '_' + self._antibiotic_name + '.sav'))
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
@@ -104,7 +154,10 @@ class ARDetectorByRandomForest(BaseARDetector):
         if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
-        with open(os.path.join(self._results_directory, 'best_models', self._target_directory, '/rf' + self._antibiotic_name + '.json'), 'w') as f:
+        with open(os.path.join(self._results_directory,
+                               'best_models',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.best_params_, cls=NumpyEncoder))
 
         print('Summary of the model:')
@@ -114,15 +167,6 @@ class ARDetectorByRandomForest(BaseARDetector):
         print(grid.best_estimator_.max_depth)
         print(grid.best_estimator_.max_features)
 
-        self._best_model = grid.best_estimator_
-
-        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
-            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
-
-        # save the model to disk
-        filename = os.path.join(self._results_directory, 'best_models', self._target_directory, 'random_forest_model_for_' + self._antibiotic_name + '.sav')
-        joblib.dump(self._best_model, filename)
-
     def predict_ar(self, x):
         self._best_model.predict(x)
 
@@ -131,6 +175,20 @@ class ARDetectorByRandomForest(BaseARDetector):
 
     def train_model(self, x_tr, y_tr):
         self._model.fit(x_tr, y_tr)
+
+    def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
+        self._best_model = self.reinitialize_best_model_with_parameters(hyperparameters)
+        self._best_model.fit(x_tr, y_tr)
+
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
+
+        # save the model to disk
+        filename = os.path.join(self._results_directory,
+                                'best_models',
+                                self._target_directory,
+                                self._model_name + '_' + self._antibiotic_name + '.sav')
+        joblib.dump(self._best_model, filename)
 
     def test_model(self, x_te, y_te):
         y_pred = self._best_model.predict(x_te)

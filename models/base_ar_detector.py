@@ -6,6 +6,9 @@ class BaseARDetector:
     def save_model(self):
         raise NotImplementedError('Subclasses must override load_model')
 
+    def set_class_weights(self, class_weights):
+        raise NotImplementedError('Subclasses must override set_class_weights')
+
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         raise NotImplementedError('Subclasses must override tune_hyperparameters')
 

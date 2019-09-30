@@ -30,21 +30,44 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         else:
             self._model = LogisticRegression(class_weight=class_weights)
 
+        self._class_weights = class_weights
         self._best_model = None
         self._target_directory = 'lr_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
 
     def set_antibiotic_name(self, antibiotic_name):
         self._antibiotic_name = antibiotic_name
 
-    def reinitialize_model_with_parameters(self, parameters, class_weights=None):
-        if class_weights is None:
-            self._model = LogisticRegression(C=parameters['C'], penalty=parameters['penalty'], solver=parameters['solver'])
+    def set_class_weights(self, class_weights):
+        self._class_weights = class_weights
+
+    def reinitialize_model_with_parameters(self, parameters):
+        if self._class_weights is None:
+            self._model = LogisticRegression(C=parameters['C'],
+                                             penalty=parameters['penalty'],
+                                             solver=parameters['solver'])
         else:
-            self._model = LogisticRegression(C=parameters['C'], penalty=parameters['penalty'], solver=parameters['solver'], class_weight=class_weights)
+            self._model = LogisticRegression(C=parameters['C'],
+                                             penalty=parameters['penalty'],
+                                             solver=parameters['solver'],
+                                             class_weight=self._class_weights)
+
+    def reinitialize_best_model_with_parameters(self, parameters):
+        if self._class_weights is None:
+            self._best_model = LogisticRegression(C=parameters['C'],
+                                             penalty=parameters['penalty'],
+                                             solver=parameters['solver'])
+        else:
+            self._best_model = LogisticRegression(C=parameters['C'],
+                                             penalty=parameters['penalty'],
+                                             solver=parameters['solver'],
+                                             class_weight=self._class_weights)
 
     def load_model(self):
         # load the model from disk
-        self._best_model = joblib.load(os.path.join(self._results_directory, 'best_models', self._target_directory, 'lr_' + self._antibiotic_name + '.sav'))
+        self._best_model = joblib.load(os.path.join(self._results_directory,
+                                                    'best_models',
+                                                    self._target_directory,
+                                                    self._model_name + '_' + self._antibiotic_name + '.sav'))
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
@@ -64,22 +87,16 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
-        with open(os.path.join(self._results_directory, 'best_models', self._target_directory, 'lr_' + self._antibiotic_name + '.json'), 'w') as f:
+        with open(os.path.join(self._results_directory,
+                               'best_models',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.best_params_, cls=NumpyEncoder))
 
         print('Summary of the model:')
         print(grid.best_score_)
         print(grid.best_estimator_.C)
         print(grid.best_estimator_.solver)
-
-        self._best_model = grid.best_estimator_
-
-        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
-            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
-
-        # save the model to disk
-        filename = os.path.join(self._results_directory, 'best_models', self._target_directory, 'lr_' + self._antibiotic_name + '.sav')
-        joblib.dump(self._best_model, filename)
 
     def predict_ar(self, x):
         self._best_model.predict(x)
@@ -89,6 +106,20 @@ class ARDetectorByLogisticRegression(BaseARDetector):
 
     def train_model(self, x_tr, y_tr):
         self._model.fit(x_tr, y_tr)
+
+    def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
+        self._best_model = self.reinitialize_best_model_with_parameters(hyperparameters)
+        self._best_model.fit(x_tr, y_tr)
+
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
+
+        # save the model to disk
+        filename = os.path.join(self._results_directory,
+                                'best_models',
+                                self._target_directory,
+                                self._model_name + '_' + self._antibiotic_name + '.sav')
+        joblib.dump(self._best_model, filename)
 
     def test_model(self, x_te, y_te):
         y_pred = self._best_model.predict(x_te)

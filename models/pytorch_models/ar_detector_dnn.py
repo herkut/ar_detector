@@ -244,7 +244,7 @@ class ARDetectorDNN(BaseARDetector):
         model.load_state_dict(torch.load(os.path.join(Config.results_directory,
                                                       'best_models',
                                                       self._target_directory,
-                                                      self._model_name + '_for_' + self._antibiotic_name + '.pt')))
+                                                      self._model_name + '_' + self._antibiotic_name + '.pt')))
         model.to(self._device)
         model.eval()
 
@@ -386,7 +386,7 @@ class ARDetectorDNN(BaseARDetector):
             else:
                 pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
 
-        y_pred = pred.numpy()
+        y_pred = pred.cpu().numpy()
 
         cm = confusion_matrix(y_te, y_pred)
         if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
