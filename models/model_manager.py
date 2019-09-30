@@ -92,13 +92,9 @@ class ModelManager:
                 self.tune_hyperparameters_for_ar_detector(ar_detector,
                                                           x_train,
                                                           y_train)
-                # test the model
-                ar_detector = ARDetectorBySVMWithRBF(feature_selection,
-                                                     Config.target_drugs[i],
-                                                     class_weights=class_weights)
-                self.test_ar_detector(ar_detector,
-                                      x_test,
-                                      y_test)
+                self.train_best_model(ar_detector, x_train, y_train, x_test, y_test)
+
+                self.test_ar_detector(ar_detector, x_test, y_test)
             #####################################
             #                                   #
             #         SVM with linear           #
@@ -112,13 +108,9 @@ class ModelManager:
                 self.tune_hyperparameters_for_ar_detector(ar_detector,
                                                           x_train,
                                                           y_train)
-                # test the model
-                ar_detector = ARDetectorBySVMWithLinear(feature_selection,
-                                                        Config.target_drugs[i],
-                                                        class_weights=class_weights)
-                self.test_ar_detector(ar_detector,
-                                      x_test,
-                                      y_test)
+                self.train_best_model(ar_detector, x_train, y_train, x_test, y_test)
+
+                self.test_ar_detector(ar_detector, x_test, y_test)
 
             #####################################
             #                                   #
@@ -133,13 +125,9 @@ class ModelManager:
                 self.tune_hyperparameters_for_ar_detector(ar_detector,
                                                           x_train,
                                                           y_train)
-                # test the model
-                ar_detector = ARDetectorByRandomForest(feature_selection,
-                                                       Config.target_drugs[i],
-                                                       class_weights=class_weights)
-                self.test_ar_detector(ar_detector,
-                                      x_test,
-                                      y_test)
+                self.train_best_model(ar_detector, x_train, y_train, x_test, y_test)
+
+                self.test_ar_detector(ar_detector, x_test, y_test)
 
             #####################################
             #                                   #
@@ -154,13 +142,9 @@ class ModelManager:
                 self.tune_hyperparameters_for_ar_detector(ar_detector,
                                                           x_train,
                                                           y_train)
-                # test the model
-                ar_detector = ARDetectorByLogisticRegression(feature_selection,
-                                                             Config.target_drugs[i],
-                                                             class_weights=class_weights)
-                self.test_ar_detector(ar_detector,
-                                      x_test,
-                                      y_test)
+                self.train_best_model(ar_detector, x_train, y_train, x_test, y_test)
+
+                self.test_ar_detector(ar_detector, x_test, y_test)
 
             #####################################
             #                                   #
