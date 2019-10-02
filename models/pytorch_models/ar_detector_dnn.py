@@ -321,8 +321,8 @@ class ARDetectorDNN(BaseARDetector):
                     # Validation
                     validation_results = self._validate_model(model, criterion, dataloader_val)
 
-                    print('[%d] training loss: %.9f' % (epoch, training_results['loss']))
-                    print('[%d] validation loss: %.9f' % (epoch, validation_results['loss']))
+                    # print('[%d] training loss: %.9f' % (epoch, training_results['loss']))
+                    # print('[%d] validation loss: %.9f' % (epoch, validation_results['loss']))
 
                     if es.step(epoch, validation_results, model):
                         # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
