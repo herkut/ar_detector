@@ -26,5 +26,4 @@ class Config:
         cls.hyperparameter_grids_directory = raw['hyperparameter_grids_directory']
         cls.deep_learning_metric = raw['deep_learning_metric']
 
-        cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide', 'Streptomycin', 'Ofloxacin',
-                                'Amikacin', 'Ciprofloxacin', 'Moxifloxacin', 'Capreomycin', 'Kanamycin']
+        cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide']
