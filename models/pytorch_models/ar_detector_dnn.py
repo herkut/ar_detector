@@ -251,7 +251,6 @@ class ARDetectorDNN(BaseARDetector):
         self._best_model = model
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
-        batch_size = 64
         # x_tr[0] sample counts x_tr[1] feature size
         feature_size = x_tr.shape[1]
 
@@ -260,6 +259,7 @@ class ARDetectorDNN(BaseARDetector):
 
         cv_results = {'grids': [], 'training_results': [], 'validation_results': []}
         for grid in hyperparameter_space:
+            batch_size = grid['batch_size']
             cv_results['grids'].append(grid)
             cv_result = {'training_results': [], 'validation_results': []}
 
@@ -268,8 +268,8 @@ class ARDetectorDNN(BaseARDetector):
             print('Grid: ' + str(grid))
             for train_indeces, validation_indeces in k_fold_indices:
                 # initialization of dataloaders
-                dataloader_tr = prepare_dataloader(self._batch_size, x_tr[train_indeces], y_tr[train_indeces])
-                dataloader_val = prepare_dataloader(self._batch_size, x_tr[validation_indeces], y_tr[validation_indeces])
+                dataloader_tr = prepare_dataloader(batch_size, x_tr[train_indeces], y_tr[train_indeces])
+                dataloader_val = prepare_dataloader(batch_size, x_tr[validation_indeces], y_tr[validation_indeces])
 
                 # initialization of the model
                 model = FeetForwardNetwork(feature_size,
@@ -371,7 +371,7 @@ class ARDetectorDNN(BaseARDetector):
 
     def test_model(self, x_te, y_te):
         self._best_model.eval()
-
+        """
         dataloader = prepare_dataloader(self._batch_size, x_te, y_te)
 
         pred = None
@@ -385,6 +385,10 @@ class ARDetectorDNN(BaseARDetector):
                 pred = torch.argmax(y_hat, dim=1)
             else:
                 pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
+        """
+
+        y_hat = self._best_model(torch.from_numpy(x_te))
+        pred = torch.argmax(y_hat, dim=1)
 
         y_pred = pred.cpu().numpy()
 
@@ -434,8 +438,8 @@ class ARDetectorDNN(BaseARDetector):
                                          self._model_name + '_' + self._antibiotic_name + '.csv'))
 
     def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
-        dataloader_tr = prepare_dataloader(self._batch_size, x_tr, y_tr)
-        dataloader_te = prepare_dataloader(self._batch_size, x_te, y_te)
+        dataloader_tr = prepare_dataloader(hyperparameters['batch_size'], x_tr, y_tr)
+        dataloader_te = prepare_dataloader(hyperparameters['batch_size'], x_te, y_te)
 
         # initialization of the model
         model = FeetForwardNetwork(self._feature_size,

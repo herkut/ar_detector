@@ -43,18 +43,20 @@ def get_k_fold_validation_indices(k, X, y):
 
 def create_hyperparameter_space(param_grid):
     hyperparameter_space = []
-    for optimizer_param in param_grid['optimizers']:
-        for lr in param_grid['learning_rates']:
-            for hu in param_grid['hidden_units']:
-                for af in param_grid['activation_functions']:
-                    for dr in param_grid['dropout_rates']:
-                        grid = {}
-                        grid['optimizer'] = optimizer_param
-                        grid['learning_rate'] = lr
-                        grid['hidden_units'] = hu
-                        grid['activation_functions'] = af
-                        grid['dropout_rate'] = dr
+    for bs in param_grid['batch_sizes']:
+        for optimizer_param in param_grid['optimizers']:
+            for lr in param_grid['learning_rates']:
+                for hu in param_grid['hidden_units']:
+                    for af in param_grid['activation_functions']:
+                        for dr in param_grid['dropout_rates']:
+                            grid = {}
+                            grid['batch_size'] = bs
+                            grid['optimizer'] = optimizer_param
+                            grid['learning_rate'] = lr
+                            grid['hidden_units'] = hu
+                            grid['activation_functions'] = af
+                            grid['dropout_rate'] = dr
 
-                        hyperparameter_space.append(grid)
+                            hyperparameter_space.append(grid)
 
     return hyperparameter_space

@@ -1,1 +1,1 @@
-{"hidden_units":[[128], [1024], [4096]],"activation_functions":[["relu"], ["leaky_relu"]],"learning_rates":[0.1, 0.01, 0.001],"optimizers":["Adam"],"dropout_rates":[0.0, 0.25, 0.5]}
+{"batch_sizes": [64, 256, 512], "hidden_units":[[128], [1024], [4096]],"activation_functions":[["relu"], ["leaky_relu"]],"learning_rates":[0.1, 0.01, 0.001],"optimizers":["Adam"],"dropout_rates":[0.0, 0.25, 0.5]}
