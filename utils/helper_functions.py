@@ -36,9 +36,14 @@ def conduct_data_preprocessing(raw_feature_matrix, raw_labels, data_representati
     return x, y
 
 
-def get_k_fold_validation_indices(k, X, y):
+def get_k_fold_indices(k, X, y):
     skf = StratifiedKFold(n_splits=k, random_state=0, shuffle=False)
     return skf.split(X, y)
+
+
+def get_k_fold(k):
+    skf = StratifiedKFold(n_splits=k, random_state=0, shuffle=False)
+    return skf
 
 
 def create_hyperparameter_space(param_grid):

@@ -13,6 +13,7 @@ import pandas as pd
 from config import Config
 from models.base_ar_detector import BaseARDetector
 from utils.confusion_matrix_drawer import plot_confusion_matrix
+from utils.helper_functions import get_k_fold
 from utils.numpy_encoder import NumpyEncoder
 
 
@@ -72,7 +73,9 @@ class ARDetectorByLogisticRegression(BaseARDetector):
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
         model = self._model
 
-        grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=5, verbose=True, n_jobs=Config.scikit_learn_n_jobs)
+        cv = get_k_fold(10)
+
+        grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=cv, verbose=True, n_jobs=Config.scikit_learn_n_jobs)
         grid.fit(x_tr, y_tr)
 
         print(grid)
