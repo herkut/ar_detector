@@ -185,15 +185,15 @@ class ARDetectorBySVMWithLinear(BaseARDetector):
 
     def reinitialize_model_with_parameters(self, parameters):
         if self._class_weights is None:
-            self._model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'])
+            self._model = svm.SVC(kernel='linear', C=parameters['C'])
         else:
-            self._model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'], class_weight=self._class_weights)
+            self._model = svm.SVC(kernel='linear', C=parameters['C'], class_weight=self._class_weights)
 
     def reinitialize_best_model_with_parameters(self, parameters):
         if self._class_weights is None:
-            self._best_model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'])
+            self._best_model = svm.SVC(kernel='linear', C=parameters['C'])
         else:
-            self._best_model = svm.SVC(kernel='linear', C=parameters['C'], gamma=parameters['gamma'], class_weight=self._class_weights)
+            self._best_model = svm.SVC(kernel='linear', C=parameters['C'], class_weight=self._class_weights)
 
     def load_model(self):
         self._best_model = joblib.load(os.path.join(self._results_directory,
