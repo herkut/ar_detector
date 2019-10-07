@@ -119,8 +119,8 @@ class ARDetectorBySVMWithRBF(BaseARDetector):
 
         cm = confusion_matrix(y_te, y_pred)
         if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2 :
-            sensitivity = float(cm[0][0]) / np.sum(cm[0])
-            specificity = float(cm[1][1]) / np.sum(cm[1])
+            specificity = float(cm[0][0]) / np.sum(cm[0])
+            sensitivity = float(cm[1][1]) / np.sum(cm[1])
             print('For ' + self._antibiotic_name)
             print(collections.Counter(y_te))
             print('Sensitivity: ' + str(sensitivity))
@@ -259,8 +259,8 @@ class ARDetectorBySVMWithLinear(BaseARDetector):
 
         cm = confusion_matrix(y_te, y_pred)
         if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
-            sensitivity = float(cm[0][0]) / np.sum(cm[0])
-            specificity = float(cm[1][1]) / np.sum(cm[1])
+            specificity = float(cm[0][0]) / np.sum(cm[0])
+            sensitivity = float(cm[1][1]) / np.sum(cm[1])
             print('For ' + self._antibiotic_name)
             print(collections.Counter(y_te))
             print('Sensitivity: ' + str(sensitivity))
