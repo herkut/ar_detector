@@ -111,7 +111,7 @@ class ARDetectorBySVMWithRBF(BaseARDetector):
         filename = os.path.join(self._results_directory,
                                 'best_models',
                                 self._target_directory,
-                                self._best_model + '_' + self._antibiotic_name + '.sav')
+                                self._model_name + '_' + self._antibiotic_name + '.sav')
         joblib.dump(self._best_model, filename)
 
     def test_model(self, x_te, y_te):
