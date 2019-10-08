@@ -26,7 +26,7 @@ class CNNDataset(Dataset):
         return res
 
     @classmethod
-    def create_sequences(cls, raw_labels, target_drug):
+    def create_and_store_sequences(cls, raw_labels, target_drug):
         cls.ordered_genes = ['gyrB', 'gyrA', 'iniA', 'iniC', 'rpoB', 'rpsL', 'embR', 'rrs', 'fabG1', 'inhA', 'rpsA',
                              'tlyA', 'ndh', 'katG', 'pncA', 'eis', 'ahpC', 'manB', 'rmlD', 'embC', 'embA', 'embB',
                              'gidB']
@@ -133,7 +133,8 @@ if __name__ == '__main__':
                                                                               'labels_dataset-ii.csv'))
 
     for td in Config.target_drugs:
-        CNNDataset.create_sequences(raw_label_matrix, td)
+        print('Creating and storing cnn dataset for ' + td)
+        CNNDataset.create_and_store_sequences(raw_label_matrix, td)
 
     """
     dataset = CNNDataset(raw_label_matrix, Config.target_drugs[3])
