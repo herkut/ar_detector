@@ -6,15 +6,17 @@ from preprocess.data_representation_preparer import DataRepresentationPreparer
 
 def filter_out_nan(x, y):
     index_to_remove = y[y.isna() == True].index
-    # index_to_remove = np.argwhere(np.isnan(y)).values
 
     xx = x.drop(index_to_remove, inplace=False)
     yy = y.drop(index_to_remove, inplace=False)
 
-    # xx = np.delete(x, index_to_remove, axis=0)
-    # yy = np.delete(y, index_to_remove, axis=0)
-
     return xx, yy
+
+
+def get_index_to_remove(y):
+    index_to_remove = y[y.isna()].index
+
+    return index_to_remove
 
 
 def conduct_data_preprocessing(raw_feature_matrix, raw_labels, data_representation):
