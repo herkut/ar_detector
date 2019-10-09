@@ -12,7 +12,7 @@ from config import Config
 from models.base_ar_detector import BaseARDetector
 from models.pytorch_models.early_stopping import EarlyStopping
 from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports, plot_confusion_matrix
-from utils.helper_functions import get_k_fold_validation_indices, create_hyperparameter_space
+from utils.helper_functions import get_k_fold_indices, create_hyperparameter_space
 from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
 
 
@@ -132,9 +132,11 @@ def prepare_dataloader(batch_size, x, y):
 
 
 class ARDetectorDNN(BaseARDetector):
-    def __init__(self, feature_selection, feature_size=None, antibiotic_name=None, model_name='dnn', class_weights=None):
+    def __init__(self, feature_selection, dataset, feature_size=None, antibiotic_name=None, model_name='dnn', class_weights=None):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
+        self._dataset = dataset
+        self._results_directory = self._results_directory + '_' + self._dataset
         self._feature_size = feature_size
         self._label_tags = Config.label_tags
 
@@ -264,7 +266,7 @@ class ARDetectorDNN(BaseARDetector):
             cv_result = {'training_results': [], 'validation_results': []}
 
             # prepare data for closs validation
-            k_fold_indices = get_k_fold_validation_indices(10, x_tr, y_tr)
+            k_fold_indices = get_k_fold_indices(10, x_tr, y_tr)
             print('Grid: ' + str(grid))
             for train_indeces, validation_indeces in k_fold_indices:
                 # initialization of dataloaders
@@ -370,6 +372,7 @@ class ARDetectorDNN(BaseARDetector):
         return self._model.forward(x)
 
     def test_model(self, x_te, y_te):
+        self._best_model.to(self._device)
         self._best_model.eval()
         """
         dataloader = prepare_dataloader(self._batch_size, x_te, y_te)
@@ -387,7 +390,7 @@ class ARDetectorDNN(BaseARDetector):
                 pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
         """
 
-        y_hat = self._best_model(torch.from_numpy(x_te))
+        y_hat = self._best_model(torch.from_numpy(x_te).float().to(self._device))
         pred = torch.argmax(y_hat, dim=1)
 
         y_pred = pred.cpu().numpy()

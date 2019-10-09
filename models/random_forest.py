@@ -20,9 +20,10 @@ def str2bool(s):
 
 class ARDetectorByRandomForest(BaseARDetector):
     def __init__(self, feature_selection, dataset, antibiotic_name=None, class_weights=None):
-        self._results_directory = Config.target_base_directory
+        self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
         self._dataset = dataset
+        self._results_directory = self._results_directory + '_' + self._dataset
         self._label_tags = Config.label_tags
         self._model_name = 'rf'
 
