@@ -7,10 +7,18 @@ import numpy as np
 
 from config import Config
 from preprocess.feature_label_preparer import FeatureLabelPreparer
-from utils.helper_functions import get_index_to_remove
+from utils.helper_functions import get_index_to_remove, get_k_fold
 
 
 class CNNDataset(Dataset):
+    whole_sequences = None
+
+    @classmethod
+    def read_sequences_from_files(cls, sequences_directory, idx):
+        cls.whole_sequences = {}
+        for i in idx.values:
+            tmp_sequence = np.load(os.path.join(sequences_directory, i + '.npz'))
+            cls.whole_sequences[i] = torch.from_numpy(tmp_sequence['arr_0'])
 
     @classmethod
     def _convert_str_to_int(cls, sequence):
@@ -26,7 +34,7 @@ class CNNDataset(Dataset):
         return res
 
     @classmethod
-    def create_and_store_sequences(cls, raw_labels, target_drug):
+    def create_and_store_sequences(cls, raw_labels):
         cls.ordered_genes = ['gyrB', 'gyrA', 'iniA', 'iniC', 'rpoB', 'rpsL', 'embR', 'rrs', 'fabG1', 'inhA', 'rpsA',
                              'tlyA', 'ndh', 'katG', 'pncA', 'eis', 'ahpC', 'manB', 'rmlD', 'embC', 'embA', 'embB',
                              'gidB']
@@ -34,14 +42,11 @@ class CNNDataset(Dataset):
         if not os.path.exists(Config.cnn_dataset_directory):
             os.makedirs(Config.cnn_dataset_directory)
 
-        if not os.path.exists(os.path.join(Config.cnn_dataset_directory, target_drug)):
-            os.makedirs(os.path.join(Config.cnn_dataset_directory, target_drug))
-
-        result_directory = os.path.join(Config.cnn_dataset_directory, target_drug)
+        result_directory = os.path.join(Config.cnn_dataset_directory)
 
         non_existing = []
         predefined_file_to_remove = ['8316-09', 'NL041']
-
+        """
         index_to_remove = get_index_to_remove(raw_labels[target_drug])
 
         for ne in predefined_file_to_remove:
@@ -49,12 +54,12 @@ class CNNDataset(Dataset):
                 non_existing.append(ne)
 
         raw_labels.drop(index_to_remove, inplace=True)
-        raw_labels.drop(non_existing, inplace=True)
+        """
+        raw_labels.drop(predefined_file_to_remove, inplace=True)
 
         idx = raw_labels.index
-        labels = raw_labels[target_drug].values
 
-        sequences = {}
+        # sequences = {}
 
         progressbar_size = len(idx)
         pbar = progressbar.ProgressBar(maxval=progressbar_size)
@@ -70,52 +75,27 @@ class CNNDataset(Dataset):
                 if tmp_sequence is None:
                     tmp_sequence = gene_int
                 else:
-                    np.concatenate((tmp_sequence, gene_int))
+                    tmp_sequence = np.concatenate((tmp_sequence, gene_int))
                 f.close()
-            sequences[i] = torch.nn.functional.one_hot(torch.from_numpy(tmp_sequence).long(), 5)
+            sequence = torch.nn.functional.one_hot(torch.from_numpy(tmp_sequence).long(), 5)
 
-            np.savez(os.path.join(result_directory, i + '.npz'), sequences[i].numpy())
+            np.savez(os.path.join(result_directory, i + '.npz'), sequence)
 
             z += 1
             pbar.update(z)
         pbar.finish()
 
-    def __init__(self, raw_labels, target_drug):
+    def __init__(self, idx, labels, target_drug):
         self.ordered_genes = ['gyrB', 'gyrA', 'iniA', 'iniC', 'rpoB', 'rpsL', 'embR', 'rrs', 'fabG1', 'inhA', 'rpsA',
                               'tlyA', 'ndh', 'katG', 'pncA', 'eis', 'ahpC', 'manB', 'rmlD', 'embC', 'embA', 'embB',
                               'gidB']
         self.target_drug = target_drug
+        self.sequences_directory = os.path.join(Config.cnn_dataset_directory, self.target_drug)
         self.sequences = {}
 
-        if not os.path.exists(Config.cnn_dataset_directory):
-            os.makedirs(Config.cnn_dataset_directory)
-
-        if not os.path.exists(os.path.join(Config.cnn_dataset_directory, self.target_drug)):
-            os.makedirs(os.path.join(Config.cnn_dataset_directory, self.target_drug))
-
-        self.sequences_directory = os.path.join(Config.cnn_dataset_directory, self.target_drug)
-
-        non_existing = []
-        predefined_file_to_remove = ['8316-09', 'NL041']
-
-        index_to_remove = get_index_to_remove(raw_labels[target_drug])
-
-        for ne in predefined_file_to_remove:
-            if ne not in index_to_remove:
-                non_existing.append(ne)
-
-        raw_labels.drop(index_to_remove, inplace=True)
-        raw_labels.drop(non_existing, inplace=True)
-
-        self.idx = raw_labels.index
-        self.labels = raw_labels[target_drug].values
-
-        self.read_sequences_from_files()
-
-    def read_sequences_from_files(self):
-        for i in self.idx.values:
-            tmp_sequence = np.load(os.path.join(self.sequences_directory, i + '.npz'))
-            self.sequences[i] = torch.from_numpy(tmp_sequence)
+        self.idx = idx
+        self.labels = labels
+        self.sequences = {k: CNNDataset.whole_sequences[k] for k in idx}
 
     def __getitem__(self, index):
         return self.sequences[self.idx[index]]
@@ -124,25 +104,63 @@ class CNNDataset(Dataset):
         return len(self.sequences)
 
 
+def create_and_store_sequences():
+    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
+                                                                              'labels_dataset-ii.csv'))
+    CNNDataset.create_and_store_sequences(raw_label_matrix)
+
+
+def test_stored_sequences():
+    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
+                                                                              'labels_dataset-ii.csv'))
+    target_drug = Config.target_drugs[0]
+
+    if not os.path.exists(Config.cnn_dataset_directory):
+        os.makedirs(Config.cnn_dataset_directory)
+
+    if not os.path.exists(os.path.join(Config.cnn_dataset_directory, target_drug)):
+        os.makedirs(os.path.join(Config.cnn_dataset_directory, target_drug))
+
+    sequences_directory = Config.cnn_dataset_directory
+
+    non_existing = []
+    predefined_file_to_remove = ['8316-09', 'NL041']
+
+    index_to_remove = get_index_to_remove(raw_label_matrix[target_drug])
+
+    for ne in predefined_file_to_remove:
+        if ne not in index_to_remove:
+            non_existing.append(ne)
+
+    raw_label_matrix.drop(index_to_remove, inplace=True)
+    raw_label_matrix.drop(non_existing, inplace=True)
+
+    idx = raw_label_matrix.index
+    labels = raw_label_matrix[target_drug].values
+
+    CNNDataset.read_sequences_from_files(sequences_directory, idx)
+
+    cv = get_k_fold(10)
+
+    for train_index, test_index in cv.split(idx, labels):
+        tr_dataset = CNNDataset(idx[train_index], labels[train_index], target_drug)
+        tr_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
+        te_dataset = CNNDataset(idx[test_index], labels[test_index], target_drug)
+        te_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
+
+        for i, data in enumerate(te_dataloader, 0):
+            print(i)
+            if i == 177:
+                print(data)
+
+
 if __name__ == '__main__':
     configuration_file = '/home/herkut/Desktop/ar_detector/configurations/conf.yml'
     raw = open(configuration_file)
     Config.initialize_configurations(raw)
 
-    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
-                                                                              'labels_dataset-ii.csv'))
+    # create_and_store_sequences()
 
-    for td in Config.target_drugs:
-        print('Creating and storing cnn dataset for ' + td)
-        CNNDataset.create_and_store_sequences(raw_label_matrix, td)
+    # test_stored_sequences()
 
-    """
-    dataset = CNNDataset(raw_label_matrix, Config.target_drugs[3])
-
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64)
-
-    for i, data in enumerate(dataloader, 0):
-        print(i)
-        if i == 177:
-            print(data)
-    """
+    print('Zaa')
