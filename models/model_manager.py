@@ -12,9 +12,9 @@ from preprocess.data_representation_preparer import DataRepresentationPreparer
 
 
 class ModelManager:
-    def __init__(self, models, data_representation='binary'):
+    def __init__(self, models, dataset, data_representation='binary'):
         self.data_representation = data_representation
-
+        self.dataset = dataset
         # Set which models would be trained
         self.models = models.split(',')
         self.dnn_models = []
@@ -70,21 +70,25 @@ class ModelManager:
             for model in self.models:
                 if model == 'svm_rbf':
                     ar_detector = ARDetectorBySVMWithRBF(feature_selection,
+                                                         self.dataset,
                                                          Config.target_drugs[i],
                                                          class_weights=class_weights)
 
                 elif model == 'svm_linear':
                     ar_detector = ARDetectorBySVMWithLinear(feature_selection,
+                                                            self.dataset,
                                                             Config.target_drugs[i],
                                                             class_weights=class_weights)
 
                 elif model == 'rf':
                     ar_detector = ARDetectorByRandomForest(feature_selection,
+                                                           self.dataset,
                                                            Config.target_drugs[i],
                                                            class_weights=class_weights)
 
                 elif model == 'lr':
                     ar_detector = ARDetectorByLogisticRegression(feature_selection,
+                                                                 self.dataset,
                                                                  Config.target_drugs[i],
                                                                  class_weights=class_weights)
 
@@ -92,6 +96,7 @@ class ModelManager:
                     # convert class weight into numpy matrix
                     class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
                     ar_detector = ARDetectorDNN(feature_selection,
+                                                self.dataset,
                                                 antibiotic_name=Config.target_drugs[i],
                                                 model_name=model,
                                                 feature_size=x_train.shape[1],

@@ -18,9 +18,10 @@ from utils.numpy_encoder import NumpyEncoder
 
 
 class ARDetectorByLogisticRegression(BaseARDetector):
-    def __init__(self, feature_selection, antibiotic_name=None, class_weights=None):
+    def __init__(self, feature_selection, dataset, antibiotic_name=None, class_weights=None):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
+        self._dataset = dataset
         self._antibiotic_name = antibiotic_name
         self._label_tags = Config.label_tags
         self._model_name = 'lr'
