@@ -7,22 +7,27 @@ import numpy as np
 def filter_out_nan(x, y):
     index_to_remove = y[y.isna()].index
 
-    x.drop(index_to_remove, inplace=True)
-    y.drop(index_to_remove, inplace=True)
+    for i in y.index:
+        print(str(i) + '--' + str(i in x.index))
+        print(str(i) + '--' + str(i in y.index))
+        print()
+
+    xx = x.drop(index_to_remove, inplace=False)
+    yy = y.drop(index_to_remove, inplace=False)
     
-    return x, y
+    return xx, yy
 
 
 def get_labels_from_file(file_containing_labels):
-    labels = pd.read_csv(file_containing_labels, index_col=0)
+    labels = pd.read_csv(file_containing_labels, index_col=0, dtype={0: str})
     return labels
 
 
 def get_feature_matrix_from_files(feature_files):
-    raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0)
+    raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0, dtype={0: str})
     # print(raw_feature_matrix.shape)
     for i in range(1, len(feature_files)):
-        tmp_feature_matrix = pd.read_csv(feature_files[i], index_col=0)
+        tmp_feature_matrix = pd.read_csv(feature_files[i], index_col=0, dtype={0: str})
         # print(tmp_feature_matrix.shape)
         for column in tmp_feature_matrix.columns:
             if column in raw_feature_matrix.columns:
@@ -65,8 +70,7 @@ if __name__ == '__main__':
                 raw_label_matrix = get_labels_from_file(os.path.join(dataset_directory, label_file))
 
                 raw_feature_matrix = get_feature_matrix_from_files(v)
-                raw_feature_matrix.to_csv(index=True)
-
+                # raw_feature_matrix.to_csv(index=True)
                 x, y = filter_out_nan(raw_feature_matrix, raw_label_matrix[td])
 
                 sss = StratifiedShuffleSplit(test_size=0.2, random_state=0)
