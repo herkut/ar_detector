@@ -152,8 +152,47 @@ class ARDetectorDNN(BaseARDetector):
 
         self._target_directory = None
         self._model_name = model_name
-        self._class_weights = class_weights[:, 1]
+        if class_weights is not None:
+            self._class_weights = class_weights[:, 1]
+        else:
+            self._class_weights = None
         self._target_directory = self._model_name + '_' + self._scoring + '_' + self._label_tags + '_' + self._feature_selection
+
+    def _initialize_model(self, feature_size, hyperparameters):
+        # initialization of the model
+        model = FeetForwardNetwork(feature_size,
+                                   2,
+                                   hyperparameters['hidden_units'],
+                                   hyperparameters['activation_functions'],
+                                   hyperparameters['dropout_rate'],
+                                   batch_normalization=True)
+
+        # put model into gpu if exists
+        model.to(self._device)
+        # initialization completed
+
+        # Optimizer initialization
+        # class weight is used to handle unbalanced data
+        # BCEWithLogitsLoss = Sigmoid->BCELoss
+        # CrossEntropyLoss = LogSoftmax->NLLLoss
+        if self._class_weights is not None:
+            criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights).to(self._device))
+        else:
+            criterion = torch.nn.NLLLoss(reduction='mean')
+
+        if hyperparameters['optimizer'] == 'Adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters['learning_rate'])
+        elif hyperparameters['optimizer'] == 'SGD':
+            optimizer = torch.optim.SGD(model.parameters(), lr=hyperparameters['learning_rate'])
+        elif hyperparameters['optimizer'] == 'Adamax':
+            optimizer = torch.optim.Adamax(model.parameters(), lr=hyperparameters['learning_rate'])
+        elif hyperparameters['optimizer'] == 'RMSProp':
+            optimizer = torch.optim.RMSProp(model.parameters(), lr=hyperparameters['learning_rate'])
+        else:
+            raise Exception('Not implemented optimizer: ' + hyperparameters['optimizer'])
+        # Optimizer initialization completed
+
+        return model, criterion, optimizer
 
     def _training_step(self, model, optimizer, criterion, dataloader):
         training_results = None
@@ -231,7 +270,7 @@ class ARDetectorDNN(BaseARDetector):
         pass
 
     def load_model(self):
-        with open(os.path.join(Config.results_directory,
+        with open(os.path.join(self._results_directory,
                                'best_models',
                                self._target_directory,
                                self._model_name + '_' + self._antibiotic_name + '.json')) as fp:
@@ -243,7 +282,7 @@ class ARDetectorDNN(BaseARDetector):
                                    best_hyperparameters['activation_functions'],
                                    best_hyperparameters['dropout_rate'],
                                    batch_normalization=True)
-        model.load_state_dict(torch.load(os.path.join(Config.results_directory,
+        model.load_state_dict(torch.load(os.path.join(self._results_directory,
                                                       'best_models',
                                                       self._target_directory,
                                                       self._model_name + '_' + self._antibiotic_name + '.pt')))
@@ -303,15 +342,15 @@ class ARDetectorDNN(BaseARDetector):
                 # Optimizer initialization completed
 
                 # create the directory holding checkpoints if not exists
-                if not os.path.exists(os.path.join(Config.results_directory, 'checkpoints')):
-                    os.makedirs(os.path.join(Config.results_directory, 'checkpoints'))
+                if not os.path.exists(os.path.join(self._results_directory, 'checkpoints')):
+                    os.makedirs(os.path.join(self._results_directory, 'checkpoints'))
 
                 es = EarlyStopping(metric='loss',
                                    mode='min',
                                    patience=10,
-                                   checkpoint_file=os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt'))
+                                   checkpoint_file=os.path.join(self._results_directory, 'checkpoints', self._model_name + '_checkpoint.pt'))
 
-                for epoch in range(2000):
+                for epoch in range(200):
                     model.train()
 
                     training_results = None
@@ -339,7 +378,7 @@ class ARDetectorDNN(BaseARDetector):
                                            grid['activation_functions'],
                                            grid['dropout_rate'],
                                            batch_normalization=True)
-                model.load_state_dict(torch.load(os.path.join(Config.results_directory, 'checkpoints', self._model_name + '_checkpoint.pt')))
+                model.load_state_dict(torch.load(os.path.join(self._results_directory, 'checkpoints', self._model_name + '_checkpoint.pt')))
                 model.to(self._device)
                 model.eval()
                 cv_result['training_results'].append(self._calculate_model_performance(model, dataloader_tr))
@@ -347,10 +386,10 @@ class ARDetectorDNN(BaseARDetector):
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
 
-        if not os.path.exists(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory)):
-            os.makedirs(os.path.join(Config.results_directory, 'grid_search_scores', self._target_directory))
+        if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
-        with open(os.path.join(Config.results_directory,
+        with open(os.path.join(self._results_directory,
                                'grid_search_scores',
                                self._target_directory,
                                self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
@@ -358,10 +397,10 @@ class ARDetectorDNN(BaseARDetector):
 
         best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
 
-        if not os.path.exists(os.path.join(Config.results_directory, 'best_models', self._target_directory)):
-            os.makedirs(os.path.join(Config.results_directory, 'best_models', self._target_directory))
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
-        with open(os.path.join(Config.results_directory,
+        with open(os.path.join(self._results_directory,
                                'best_models',
                                self._target_directory,
                                self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
@@ -373,22 +412,8 @@ class ARDetectorDNN(BaseARDetector):
 
     def test_model(self, x_te, y_te):
         self._best_model.to(self._device)
+
         self._best_model.eval()
-        """
-        dataloader = prepare_dataloader(self._batch_size, x_te, y_te)
-
-        pred = None
-        for i, data in enumerate(dataloader, 0):
-            inputs, labels = data
-            inputs = inputs.to(self._device)
-            labels = labels.to(self._device)
-
-            y_hat = self._best_model(inputs)
-            if pred is None:
-                pred = torch.argmax(y_hat, dim=1)
-            else:
-                pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
-        """
 
         y_hat = self._best_model(torch.from_numpy(x_te).float().to(self._device))
         pred = torch.argmax(y_hat, dim=1)
@@ -460,7 +485,7 @@ class ARDetectorDNN(BaseARDetector):
         # class weight is used to handle unbalanced data
         # BCEWithLogitsLoss = Sigmoid->BCELoss
         # CrossEntropyLoss = LogSoftmax->NLLLoss
-        criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(self._class_weights).to(self._device))
+        criterion = torch.nn.NLLLoss(reduction='mean')
         if hyperparameters['optimizer'] == 'Adam':
             optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters['learning_rate'])
         elif hyperparameters['optimizer'] == 'SGD':
@@ -474,13 +499,13 @@ class ARDetectorDNN(BaseARDetector):
         # Optimizer initialization completed
 
         # create the directory holding checkpoints if not exists
-        if not os.path.exists(os.path.join(Config.results_directory, 'checkpoints')):
-            os.makedirs(os.path.join(Config.results_directory, 'checkpoints'))
+        if not os.path.exists(os.path.join(self._results_directory, 'checkpoints')):
+            os.makedirs(os.path.join(self._results_directory, 'checkpoints'))
 
         es = EarlyStopping(metric='loss',
                            mode='min',
                            patience=10,
-                           checkpoint_file=os.path.join(Config.results_directory,
+                           checkpoint_file=os.path.join(self._results_directory,
                                                         'best_models',
                                                         self._target_directory,
                                                         self._model_name + '_' + self._antibiotic_name + '.pt'))
