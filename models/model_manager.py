@@ -159,7 +159,8 @@ class ModelManager:
 
             unique, counts = np.unique(y, return_counts=True)
 
-            class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+            class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
+            # class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
             print("For the antibiotic " + Config.target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
@@ -314,7 +315,7 @@ class ModelManager:
         print(ar_detector._best_model)
 
     def train_best_model(self, ar_detector, x_tr, y_tr, x_te, y_te):
-        with open(os.path.join(Config.results_directory,
+        with open(os.path.join(ar_detector._results_directory,
                                'best_models',
                                ar_detector._target_directory,
                                ar_detector._model_name + '_' + ar_detector._antibiotic_name + '.json')) as fp:
