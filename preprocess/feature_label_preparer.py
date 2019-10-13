@@ -145,9 +145,9 @@ class FeatureLabelPreparer:
             # print(tmp_feature_matrix.shape)
             for column in tmp_feature_matrix.columns:
                 if column in raw_feature_matrix.columns:
-                    for i in raw_feature_matrix.index:
-                        if raw_feature_matrix.at[i, column] == 0 and tmp_feature_matrix.at[i, column] == 1:
-                            raw_feature_matrix.at[i, column] = 1
+                    for j in raw_feature_matrix.index:
+                        if raw_feature_matrix.at[j, column] == 0 and tmp_feature_matrix.at[j, column] == 1:
+                            raw_feature_matrix.at[j, column] = 1
                 else:
                     raw_feature_matrix[column] = tmp_feature_matrix[column]
 
