@@ -30,12 +30,12 @@ class ModelManager:
             tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
                                                     Config.target_drugs[i] + '_tr_indices.csv'),
                                        delimiter=' ',
-                                       dtype=np.int32)
+                                       dtype=str)
 
             te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
                                                     Config.target_drugs[i] + '_te_indices.csv'),
                                        delimiter=' ',
-                                       dtype=np.int32)
+                                       dtype=str)
 
             # Random state is used to make train and test split the same on each iteration
             if self.data_representation == 'tfidf':
