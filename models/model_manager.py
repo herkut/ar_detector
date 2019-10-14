@@ -27,11 +27,13 @@ class ModelManager:
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_tr_indices.csv'),
+            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                    Config.target_drugs[i] + '_tr_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
-            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_te_indices.csv'),
+            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                    Config.target_drugs[i] + '_te_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
@@ -61,7 +63,8 @@ class ModelManager:
 
             unique, counts = np.unique(y, return_counts=True)
 
-            class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+            # class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+            class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
 
             print("For the antibiotic " + Config.target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
@@ -125,11 +128,13 @@ class ModelManager:
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_tr_indices.csv'),
+            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                    Config.target_drugs[i] + '_tr_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
-            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_te_indices.csv'),
+            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                    Config.target_drugs[i] + '_te_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
@@ -159,8 +164,8 @@ class ModelManager:
 
             unique, counts = np.unique(y, return_counts=True)
 
-            class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
             # class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+            class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
 
             print("For the antibiotic " + Config.target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
@@ -214,11 +219,13 @@ class ModelManager:
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_tr_indices.csv'),
+            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                    Config.target_drugs[i] + '_tr_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
-            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory, Config.target_drugs[i] + '_te_indices.csv'),
+            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                    Config.target_drugs[i] + '_te_indices.csv'),
                                        delimiter=' ',
                                        dtype=np.int32)
 
@@ -248,7 +255,8 @@ class ModelManager:
 
             unique, counts = np.unique(y, return_counts=True)
 
-            class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+            # class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+            class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
 
             print("For the antibiotic " + Config.target_drugs[i])
             print("Size of training dataset " + str(np.shape(x_train)))
