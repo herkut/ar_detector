@@ -11,10 +11,10 @@ from config import Config
 def main():
     args = docopt("""
     Usage: 
-        run.py tune_hyperparameters <configuration_file> <models> <dataset> [--data_representation=<data_representation>]
-        run.py train_best_models <configuration_file> <models> <dataset> [--data_representation=<data_representation>]
-        run.py test_best_models <configuration_file> <models> <dataset> [--data_representation=<data_representation>]
-        run.py execute_experiments <configuration_file> <models> <dataset> [--data_representation=<data_representation>]
+        run.py tune_hyperparameters <configuration_file> <models> [--data_representation=<data_representation>]
+        run.py train_best_models <configuration_file> <models> [--data_representation=<data_representation>]
+        run.py test_best_models <configuration_file> <models> [--data_representation=<data_representation>]
+        run.py execute_experiments <configuration_file> <models> [--data_representation=<data_representation>]
         run.py select_best_model <configuration_file> <directory_containing_results>
         
     Options:
@@ -27,6 +27,7 @@ def main():
 
     raw = open(configuration_file)
     Config.initialize_configurations(raw)
+    dataset = Config.target_dataset
 
     if args['--data_representation']:
         data_representation = args['--data_representation']
@@ -37,7 +38,6 @@ def main():
 
         # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
         # please check old_raw_feature_selection file for alternatives
-        dataset = args['<dataset>']
         if dataset == 'dataset-i':
             raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
                                         os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
@@ -70,7 +70,6 @@ def main():
 
         # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
         # please check old_raw_feature_selection file for alternatives
-        dataset = args['<dataset>']
         if dataset == 'dataset-i':
             raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
                 os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
@@ -103,7 +102,6 @@ def main():
 
         # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
         # please check old_raw_feature_selection file for alternatives
-        dataset = args['<dataset>']
         if dataset == 'dataset-i':
             raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
                 os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
@@ -136,7 +134,6 @@ def main():
 
         # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
         # please check old_raw_feature_selection file for alternatives
-        dataset = args['<dataset>']
         if dataset == 'dataset-i':
             raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
                                         os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
