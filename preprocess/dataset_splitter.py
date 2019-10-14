@@ -82,10 +82,10 @@ if __name__ == '__main__':
                                        td + '_tr_indices.csv'),
                           'w') as csv_file:
                     writer = csv.writer(csv_file, delimiter=',')
-                    for x in train_index: writer.writerow([x])
+                    for tmp in train_index: writer.writerow([x.index[tmp]])
 
                 with open(os.path.join(target_directory,
                                        td + '_te_indices.csv'),
                           'w') as csv_file:
                     writer = csv.writer(csv_file, delimiter=',')
-                    for x in test_index: writer.writerow([x])
+                    for tmp in test_index: writer.writerow([x.index[tmp]])

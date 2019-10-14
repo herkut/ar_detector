@@ -138,10 +138,10 @@ class FeatureLabelPreparer:
 
     @staticmethod
     def get_feature_matrix_from_files(feature_files):
-        raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0)
+        raw_feature_matrix = pd.read_csv(feature_files[0], index_col=0, dtype={0: str})
         # print(raw_feature_matrix.shape)
         for i in range(1, len(feature_files)):
-            tmp_feature_matrix = pd.read_csv(feature_files[i], index_col=0)
+            tmp_feature_matrix = pd.read_csv(feature_files[i], index_col=0, dtype={0: str})
             # print(tmp_feature_matrix.shape)
             for column in tmp_feature_matrix.columns:
                 if column in raw_feature_matrix.columns:
@@ -156,7 +156,7 @@ class FeatureLabelPreparer:
 
     @staticmethod
     def get_labels_from_file(file_containing_labels):
-        labels = pd.read_csv(file_containing_labels, index_col=0)
+        labels = pd.read_csv(file_containing_labels, index_col=0, dtype={0: str})
         return labels
 
 
