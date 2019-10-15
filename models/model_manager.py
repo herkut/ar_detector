@@ -301,7 +301,7 @@ class ModelManager:
                                       y_test)
 
     def filter_out_nan(self, x, y):
-        index_to_remove = y[y.isna() == True].index
+        index_to_remove = y[y.isna()].index
 
         xx = x.drop(index_to_remove, inplace=False)
         yy = y.drop(index_to_remove, inplace=False)

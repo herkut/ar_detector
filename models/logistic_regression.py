@@ -113,7 +113,7 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         self._model.fit(x_tr, y_tr)
 
     def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
-        self._best_model = self.reinitialize_best_model_with_parameters(hyperparameters)
+        self.reinitialize_best_model_with_parameters(hyperparameters)
         self._best_model.fit(x_tr, y_tr)
 
         if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
