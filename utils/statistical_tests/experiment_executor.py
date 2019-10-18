@@ -7,7 +7,6 @@ import numpy as np
 from models.logistic_regression import ARDetectorByLogisticRegression
 from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
-from preprocess.data_representation_preparer import DataRepresentationPreparer
 from utils.confusion_matrix_drawer import classification_report
 from utils.helper_functions import conduct_data_preprocessing
 from utils.numpy_encoder import NumpyEncoder
@@ -108,6 +107,7 @@ class ExperimentExecutor:
                 class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
 
                 ar_detector.set_antibiotic_name(target_drugs[j])
+                ar_detector.set_class_weights(class_weights)
 
                 # load best parameters and reinitialize the model with these parameters
                 with open(directory_containing_best_model_informations + ar_detector._target_directory + '/' + model + '_' + target_drugs[j] + '.json') as json_data:
@@ -132,7 +132,7 @@ class ExperimentExecutor:
                 x_test = x.loc[te_indexes].values
                 y_test = y.loc[te_indexes].values
 
-                ar_detector.reinitialize_model_with_parameters(parameters, class_weights=class_weights)
+                ar_detector.reinitialize_model_with_parameters(parameters)
 
                 ar_detector.train_model(x_train, y_train)
 
@@ -163,7 +163,7 @@ class ExperimentExecutor:
                 with open(directory_containing_best_model_informations + ar_detector._target_directory + '/' + model + '_' + target_drugs[j] + '.json') as json_data:
                     parameters = json.load(json_data)
 
-                ar_detector.reinitialize_model_with_parameters(parameters, class_weights=class_weights)
+                ar_detector.reinitialize_model_with_parameters(parameters)
 
                 ar_detector.train_model(x_train, y_train)
 
