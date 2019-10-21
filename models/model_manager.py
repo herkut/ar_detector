@@ -23,19 +23,23 @@ class ModelManager:
             if model.startswith('dnn'):
                 self.dnn_models.append(model)
 
+    def read_indices(self, i):
+        tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                Config.target_drugs[i] + '_tr_indices.csv'),
+                                   delimiter=' ',
+                                   dtype=str)
+
+        te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
+                                                Config.target_drugs[i] + '_te_indices.csv'),
+                                   delimiter=' ',
+                                   dtype=str)
+        return tr_indexes, te_indexes
+
     def tune_train_and_test_models(self, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
-                                                    Config.target_drugs[i] + '_tr_indices.csv'),
-                                       delimiter=' ',
-                                       dtype=str)
-
-            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
-                                                    Config.target_drugs[i] + '_te_indices.csv'),
-                                       delimiter=' ',
-                                       dtype=str)
+            tr_indexes, te_indexes = self.read_indices(i)
 
             # Random state is used to make train and test split the same on each iteration
             if self.data_representation == 'tfidf':
@@ -128,15 +132,7 @@ class ModelManager:
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
-                                                    Config.target_drugs[i] + '_tr_indices.csv'),
-                                       delimiter=' ',
-                                       dtype=np.int32)
-
-            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
-                                                    Config.target_drugs[i] + '_te_indices.csv'),
-                                       delimiter=' ',
-                                       dtype=np.int32)
+            tr_indexes, te_indexes = self.read_indices(i)
 
             # Random state is used to make train and test split the same on each iteration
             if self.data_representation == 'tfidf':
@@ -219,15 +215,7 @@ class ModelManager:
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
 
-            tr_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
-                                                    Config.target_drugs[i] + '_tr_indices.csv'),
-                                       delimiter=' ',
-                                       dtype=np.int32)
-
-            te_indexes = np.genfromtxt(os.path.join(Config.dataset_index_directory + '_' + Config.target_dataset,
-                                                    Config.target_drugs[i] + '_te_indices.csv'),
-                                       delimiter=' ',
-                                       dtype=np.int32)
+            tr_indexes, te_indexes = self.read_indices(i)
 
             # Random state is used to make train and test split the same on each iteration
             if self.data_representation == 'tfidf':

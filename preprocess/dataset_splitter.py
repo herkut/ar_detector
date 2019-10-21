@@ -57,10 +57,10 @@ if __name__ == '__main__':
             label_file = 'labels.csv'
         elif dataset == 'dataset-ii':
             raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                    os.path.join(dataset_directory, 'features_dataset_ii_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                    os.path.join(dataset_directory, 'features_dataset_ii_with_normalization', 'indel_platypus_0.0_all.csv')]
+                    os.path.join(dataset_directory, 'features_dataset_ii_with_normalization', 'sorted_snp_bcftools_0.9_notunique.csv'),
+                    os.path.join(dataset_directory, 'features_dataset_ii_with_normalization', 'sorted_indel_platypus_0.0_all.csv')]
             }
-            label_file = 'labels_dataset-ii.csv'
+            label_file = 'sorted_labels_dataset-ii.csv'
         ##
         feature_selections = {}
         for k, v in raw_feature_selections.items():
@@ -82,10 +82,12 @@ if __name__ == '__main__':
                                        td + '_tr_indices.csv'),
                           'w') as csv_file:
                     writer = csv.writer(csv_file, delimiter=',')
-                    for tmp in train_index: writer.writerow([x.index[tmp]])
+                    for tmp in train_index:
+                        writer.writerow([x.index[tmp]])
 
                 with open(os.path.join(target_directory,
                                        td + '_te_indices.csv'),
                           'w') as csv_file:
                     writer = csv.writer(csv_file, delimiter=',')
-                    for tmp in test_index: writer.writerow([x.index[tmp]])
+                    for tmp in test_index:
+                        writer.writerow([x.index[tmp]])

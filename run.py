@@ -8,6 +8,35 @@ from utils.statistical_tests.experiment_executor import ExperimentExecutor
 from config import Config
 
 
+def get_labels_and_raw_feature_selections(dataset):
+    # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
+    # please check old_raw_feature_selection file for alternatives
+    if dataset == 'dataset-i':
+        raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
+            os.path.join(Config.dataset_directory,
+                         'new_approach_with_normalization',
+                         'snp_bcftools_0.9_notunique.csv'),
+            os.path.join(Config.dataset_directory,
+                         'new_approach_with_normalization',
+                         'indel_platypus_0.0_all.csv')]
+        }
+        label_file = 'labels.csv'
+    elif dataset == 'dataset-ii':
+        raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
+            os.path.join(Config.dataset_directory,
+                         'features_dataset_ii_with_normalization',
+                         'sorted_snp_bcftools_0.9_notunique.csv'),
+            os.path.join(Config.dataset_directory,
+                         'features_dataset_ii_with_normalization',
+                         'sorted_indel_platypus_0.0_all.csv')]
+        }
+        label_file = 'sorted_labels_dataset-ii.csv'
+    else:
+        raise Exception('Unknown dataset: ' + dataset)
+
+    return label_file, raw_feature_selections
+
+
 def main():
     args = docopt("""
     Usage: 
@@ -36,22 +65,7 @@ def main():
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
-        # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
-        # please check old_raw_feature_selection file for alternatives
-        if dataset == 'dataset-i':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                                        os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                                        os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels.csv'
-        elif dataset == 'dataset-ii':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels_dataset-ii.csv'
-        else:
-            raise Exception('Unknown dataset: ' + dataset)
+        label_file, raw_feature_selections = get_labels_and_raw_feature_selections(dataset)
 
         feature_selections = {}
         for k, v in raw_feature_selections.items():
@@ -68,22 +82,7 @@ def main():
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
-        # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
-        # please check old_raw_feature_selection file for alternatives
-        if dataset == 'dataset-i':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels.csv'
-        elif dataset == 'dataset-ii':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels_dataset-ii.csv'
-        else:
-            raise Exception('Unknown dataset: ' + dataset)
+        label_file, raw_feature_selections = get_labels_and_raw_feature_selections(dataset)
 
         feature_selections = {}
         for k, v in raw_feature_selections.items():
@@ -100,22 +99,7 @@ def main():
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
-        # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
-        # please check old_raw_feature_selection file for alternatives
-        if dataset == 'dataset-i':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels.csv'
-        elif dataset == 'dataset-ii':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels_dataset-ii.csv'
-        else:
-            raise Exception('Unknown dataset: ' + dataset)
+        label_file, raw_feature_selections = get_labels_and_raw_feature_selections(dataset)
 
         feature_selections = {}
         for k, v in raw_feature_selections.items():
@@ -132,22 +116,7 @@ def main():
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
-        # As Arzucan Ozgur suggested, we focus on the feature selection approach in the reference paper,
-        # please check old_raw_feature_selection file for alternatives
-        if dataset == 'dataset-i':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                                        os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                                        os.path.join(Config.dataset_directory, 'new_approach_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels.csv'
-        elif dataset == 'dataset-ii':
-            raw_feature_selections = {'snp_09_bcf_nu_indel_00_platypus_all': [
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'snp_bcftools_0.9_notunique.csv'),
-                os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'indel_platypus_0.0_all.csv')]
-            }
-            label_file = 'labels_dataset-ii.csv'
-        else:
-            raise Exception('Unknown dataset: ' + dataset)
+        label_file, raw_feature_selections = get_labels_and_raw_feature_selections(dataset)
 
         feature_selections = {}
         for k, v in raw_feature_selections.items():

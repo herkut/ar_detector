@@ -154,12 +154,14 @@ class FeatureLabelPreparer:
                     raw_feature_matrix[column] = tmp_feature_matrix[column]
 
         # print(raw_feature_matrix.shape)
+        # raw_feature_matrix.sort_index(inplace=True)
         return raw_feature_matrix
 
     @staticmethod
     def get_labels_from_file(file_containing_labels):
         labels = pd.read_csv(file_containing_labels, index_col=0, dtype={0: str})
         labels.index = labels.index.astype(str)
+        # labels.sort_index(inplace=True)
         return labels
 
 

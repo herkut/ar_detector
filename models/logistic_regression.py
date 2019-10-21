@@ -26,7 +26,7 @@ class ARDetectorByLogisticRegression(BaseARDetector):
         self._antibiotic_name = antibiotic_name
         self._label_tags = Config.label_tags
         self._model_name = 'lr'
-        self._scoring = Config.scoring
+        self._scoring = Config.traditional_ml_scoring
 
         if class_weights is None:
             self._model = LogisticRegression()
