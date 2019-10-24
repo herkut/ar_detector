@@ -1,4 +1,5 @@
 import os
+import timeit
 
 import progressbar
 import torch
@@ -8,6 +9,28 @@ import numpy as np
 from config import Config
 from preprocess.feature_label_preparer import FeatureLabelPreparer
 from utils.helper_functions import get_index_to_remove, get_k_fold
+
+
+class ARCNNDataset(Dataset):
+    def __init__(self, idx, labels, target_drug):
+        self.ordered_genes = ['gyrB', 'gyrA', 'iniA', 'iniC', 'rpoB', 'rpsL', 'embR', 'rrs', 'fabG1', 'inhA', 'rpsA',
+                              'tlyA', 'ndh', 'katG', 'pncA', 'eis', 'ahpC', 'manB', 'rmlD', 'embC', 'embA', 'embB',
+                              'gidB']
+        self.target_drug = target_drug
+        self.sequences_directory = os.path.join(Config.cnn_dataset_directory)
+
+        self.idx = idx
+        self.labels = np.reshape(labels, (-1, 1))
+
+    def __getitem__(self, index):
+        tmp_sequence = np.load(os.path.join(self.sequences_directory, self.idx[index] + '.npz'))
+        sequence = torch.from_numpy(tmp_sequence['arr_0'])
+        labels = torch.from_numpy(self.labels[index]).long()
+
+        return (sequence, labels)
+
+    def __len__(self):
+        return labels.shape[0]
 
 
 class CNNDataset(Dataset):
@@ -112,7 +135,7 @@ def create_and_store_sequences():
 
 def test_stored_sequences():
     raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
-                                                                              'labels_dataset-ii.csv'))
+                                                                              'sorted_labels_dataset-ii.csv'))
     target_drug = Config.target_drugs[0]
 
     if not os.path.exists(Config.cnn_dataset_directory):
@@ -148,10 +171,25 @@ def test_stored_sequences():
         te_dataset = CNNDataset(idx[test_index], labels[test_index], target_drug)
         te_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
 
-        for i, data in enumerate(te_dataloader, 0):
-            print(i)
-            if i == 177:
-                print(data)
+
+def find_bactera_with_all_labels():
+    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
+                                                                              'sorted_labels_dataset-ii.csv'))
+    for i in Config.target_drugs:
+        target_drug = i
+
+        non_existing = []
+        predefined_file_to_remove = ['8316-09', 'NL041']
+
+        index_to_remove = get_index_to_remove(raw_label_matrix[target_drug])
+
+        for ne in predefined_file_to_remove:
+            if ne not in index_to_remove and ne in raw_label_matrix.index:
+                non_existing.append(ne)
+
+        raw_label_matrix.drop(index_to_remove, inplace=True)
+        raw_label_matrix.drop(non_existing, inplace=True)
+    return raw_label_matrix
 
 
 if __name__ == '__main__':
@@ -162,5 +200,40 @@ if __name__ == '__main__':
     # create_and_store_sequences()
 
     # test_stored_sequences()
+    rlm = find_bactera_with_all_labels()
+
+    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
+                                                                              'sorted_labels_dataset-ii.csv'))
+
+    target_drug = Config.target_drugs[0]
+
+    non_existing = []
+    predefined_file_to_remove = ['8316-09', 'NL041']
+
+    index_to_remove = get_index_to_remove(raw_label_matrix[target_drug])
+
+    for ne in predefined_file_to_remove:
+        if ne not in index_to_remove:
+            non_existing.append(ne)
+
+    raw_label_matrix.drop(index_to_remove, inplace=True)
+    raw_label_matrix.drop(non_existing, inplace=True)
+
+    idx = raw_label_matrix.index
+    labels = raw_label_matrix[target_drug].values
+
+    cv = get_k_fold(10)
+
+    for train_index, test_index in cv.split(idx, labels):
+        tr_dataset = ARCNNDataset(idx[train_index], labels[train_index], target_drug)
+        tr_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
+        te_dataset = ARCNNDataset(idx[test_index], labels[test_index], target_drug)
+        te_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
+
+        start = timeit.default_timer()
+        for i_batch, sample_batched in enumerate(tr_dataloader):
+            print(i_batch)
+        stop = timeit.default_timer()
+        print('Execution time for iterating whole dataset: ', stop-start)
 
     print('Zaa')
