@@ -1,6 +1,13 @@
+import os
+
 import torch
 
+from config import Config
 from models.base_ar_detector import BaseARDetector
+from preprocess.cnn_dataset import ARCNNDataset
+from preprocess.feature_label_preparer import FeatureLabelPreparer
+from utils.helper_functions import get_index_to_remove, get_k_fold
+import numpy as np
 
 
 class ConvNet1D(torch.nn.Module):
@@ -19,6 +26,23 @@ class ConvNet1D(torch.nn.Module):
                  fc_dropout_rate,
                  batch_normalization=False,
                  pooling_type=None):
+        """
+
+        :param feature_size:
+        :param first_in_channel:
+        :param output_size:
+        :param conv_kernels:
+        :param conv_channels:
+        :param conv_strides:
+        :param conv_activation_functions:
+        :param pooling_kernels:
+        :param pooling_strides:
+        :param fc_hidden_units:
+        :param fc_activation_functions:
+        :param fc_dropout_rate:
+        :param batch_normalization:
+        :param pooling_type:
+        """
         super(ConvNet1D, self).__init__()
         self.feature_size = feature_size
         self.first_in_channel = first_in_channel
@@ -132,12 +156,16 @@ class ConvNet1D(torch.nn.Module):
             elif self.conv_afs[i] == 'leaky_relu':
                 x = torch.nn.LeakyReLU()(x)
 
-        # pooling
-        x = self.pooling(x)
+            if self.poolings[i] is not None:
+                x = self.poolings[i](x)
 
         # fc
         for i in range(len(self.fcs)):
-            x = self.fcs[i](x)
+            if i ==0:
+                # like flatten
+                x = self.fcs[i](x.view(-1, x.shape[1]*x.shape[2]))
+            else:
+                x = self.fcs[i](x)
             if self.do_bn:
                 x = self.fc_bns[i](x)
             if self.do_dropout:
@@ -173,15 +201,71 @@ class ConvNet1D(torch.nn.Module):
 
 class ARDetectorCNN(BaseARDetector):
     def __init__(self):
-        pass
+        # self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            gpu_count = torch.cuda.device_count()
+            gpu_usages = np.zeros(gpu_count)
+            for i in range(gpu_count):
+                gpu_usages[i] = torch.cuda.memory_allocated(i)
+            least_used_gpu = np.argmin(gpu_usages)
+            self._device = torch.device("cuda:" + str(least_used_gpu))
+        else:
+            self._device = "cpu"
+
+    def _initialize_model(self, device, feature_size, first_in_channel, class_weights, hyperparameters):
+        """
+        feature_size,
+        output_size,
+        conv_kernels,
+        conv_channels,
+        conv_strides,
+        conv_activation_functions,
+        pooling_kernels,
+        pooling_strides,
+        fc_hidden_units,
+        fc_activation_functions,
+        fc_dropout_rate,
+        batch_normalization=False,
+        pooling_type=None
+        """
+        model = ConvNet1D(feature_size,
+                          first_in_channel,
+                          output_size,
+                          hyperparameters['conv_kernels'],
+                          hyperparameters['conv_channels'],
+                          hyperparameters['conv_strides'],
+                          hyperparameters['conv_activation_functions'],
+                          hyperparameters['pooling_kernels'],
+                          hyperparameters['pooling_strides'],
+                          hyperparameters['fc_hidden_units'],
+                          hyperparameters['fc_activation_functions'],
+                          hyperparameters['fc_dropout'],
+                          batch_normalization=True,
+                          pooling_type=hyperparameters['pooling_types'])
+        model.to(device)
+
+        if class_weights is not None:
+            criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(class_weights).to(device))
+        else:
+            criterion = torch.nn.NLLLoss(reduction='mean')
+
+        if hyperparameters['optimizer'] == 'Adam':
+            optimizer = torch.optim.Adam(conv_net.parameters(), lr=learning_rate)
+        elif hyperparameters['optimizer'] == 'SGD':
+            optimizer = torch.optim.SGD(conv_net.parameters(), lr=learning_rate)
+        elif hyperparameters['optimizer'] == 'Adamax':
+            optimizer = torch.optim.Adamax(conv_net.parameters(), lr=learning_rate)
+        elif hyperparameters['optimizer'] == 'RMSProp':
+            optimizer = torch.optim.RMSProp(conv_net.parameters(), lr=learning_rate)
+        else:
+            raise Exception('Not implemented optimizer: ' + hyperparameters['optimizer'])
+
+        return model, criterion, optimizer
 
     def load_model(self):
         pass
 
     def save_model(self):
-        pass
-
-    def set_class_weights(self, class_weights):
         pass
 
     def tune_hyperparameters(self, param_grid, x_tr, y_tr):
@@ -198,6 +282,46 @@ class ARDetectorCNN(BaseARDetector):
 
 
 if __name__ == '__main__':
+    feature_size = 37733
+    first_in_channel = 5
+    output_size = 2
+    optimizer = 'Adam'
+    learning_rate = 0.001
+
+    configuration_file = '/home/herkut/Desktop/ar_detector/configurations/conf.yml'
+    raw = open(configuration_file)
+    Config.initialize_configurations(raw)
+
+    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
+                                                                              'sorted_labels_dataset-ii.csv'))
+
+    target_drug = Config.target_drugs[0]
+
+    non_existing = []
+    predefined_file_to_remove = ['8316-09', 'NL041']
+
+    index_to_remove = get_index_to_remove(raw_label_matrix[target_drug])
+
+    for ne in predefined_file_to_remove:
+        if ne not in index_to_remove:
+            non_existing.append(ne)
+
+    raw_label_matrix.drop(index_to_remove, inplace=True)
+    raw_label_matrix.drop(non_existing, inplace=True)
+
+    idx = raw_label_matrix.index
+    labels = raw_label_matrix[target_drug].values
+
+    unique, counts = np.unique(labels, return_counts=True)
+
+    # class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
+    class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
+    class_weights = np.array(list(class_weights.items()), dtype=np.float32)[:, 1]
+    ##############################################
+    #                                            #
+    #       Convolutional Neural Network         #
+    #                                            #
+    ##############################################
     """
     feature_size,
     output_size,
@@ -211,11 +335,6 @@ if __name__ == '__main__':
     batch_normalization=False,
     pooling_type=None
     """
-
-    feature_size = 37733
-    first_in_channel = 5
-    output_size = 2
-
     conv_net = ConvNet1D(feature_size,
                          first_in_channel,
                          output_size,
@@ -230,5 +349,43 @@ if __name__ == '__main__':
                          0,
                          batch_normalization=True,
                          pooling_type='max')
+    criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(class_weights))
+    if optimizer == 'Adam':
+        optimizer = torch.optim.Adam(conv_net.parameters(), lr=learning_rate)
+    elif optimizer == 'SGD':
+        optimizer = torch.optim.SGD(conv_net.parameters(), lr=learning_rate)
+    elif optimizer == 'Adamax':
+        optimizer = torch.optim.Adamax(conv_net.parameters(), lr=learning_rate)
+    elif optimizer == 'RMSProp':
+        optimizer = torch.optim.RMSProp(conv_net.parameters(), lr=learning_rate)
+    else:
+        raise Exception('Not implemented optimizer: ' + optimizer)
 
     print(conv_net)
+
+    cv = get_k_fold(10)
+
+    for train_index, test_index in cv.split(idx, labels):
+        tr_dataset = ARCNNDataset(idx[train_index], labels[train_index], target_drug)
+        tr_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
+        te_dataset = ARCNNDataset(idx[test_index], labels[test_index], target_drug)
+        te_dataloader = torch.utils.data.DataLoader(te_dataset, batch_size=64)
+
+        training_results = None
+        training_loss = 0.0
+        for epoch in range(20):
+            for i, data in enumerate(tr_dataloader):
+                inputs, labels = data
+                # initialization of gradients
+                optimizer.zero_grad()
+                # Forward propagation
+                y_hat = conv_net(inputs.float())
+                pred = torch.argmax(y_hat, dim=1)
+                # Computation of cost function
+                cost = criterion(y_hat, labels)
+                # Back propagation
+                cost.backward()
+                # Update parameters
+                optimizer.step()
+
+                training_loss += cost
