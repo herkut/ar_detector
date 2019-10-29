@@ -200,7 +200,7 @@ class ConvNet1D(torch.nn.Module):
 
 
 class ARDetectorCNN(BaseARDetector):
-    def __init__(self):
+    def __init__(self, feature_size, first_in_channel, hyperparameters, antibiotic_name=None, model_name='cnn', class_weights=None):
         # self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
             gpu_count = torch.cuda.device_count()

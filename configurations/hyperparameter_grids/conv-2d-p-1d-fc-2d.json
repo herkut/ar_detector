@@ -1,0 +1,15 @@
+{
+  "batch_sizes": [64, 512, 1024],
+  "optimizers": ["Adam", "Nadam"],
+  "learning_rates": [0.01, 0.001],
+  "conv_kernels": [[16, 32]],
+  "conv_channels": [[64, 128]],
+  "conv_strides": [[1,1]],
+  "conv_activation_functions": [["relu", "relu"], ["leaky_relu", "leaky_relu"]],
+  "pooling_kernels": [[null, 13]],
+  "pooling_strides": [[null, 13]],
+  "pooling_types": ["max", "average"],
+  "fc_hidden_units": [[1024, 256], [512, 512],[256, 1024]],
+  "fc_activation_functions": [["relu", "relu"], ["leaky_relu", "leaky_relu"]],
+  "fc_dropout_rates": [0, 0.25, 0.5]
+}
