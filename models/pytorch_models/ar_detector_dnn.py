@@ -132,6 +132,7 @@ def prepare_dataloader(batch_size, x, y):
 
 
 class ARDetectorDNN(BaseARDetector):
+    # TODO convert multilabel classifier and use only samples which have label for all antibiotics
     def __init__(self, feature_selection, dataset, feature_size=None, antibiotic_name=None, model_name='dnn', class_weights=None):
         self._results_directory = Config.results_directory
         self._feature_selection = feature_selection
@@ -304,7 +305,7 @@ class ARDetectorDNN(BaseARDetector):
             cv_results['grids'].append(grid)
             cv_result = {'training_results': [], 'validation_results': []}
 
-            # prepare data for closs validation
+            # prepare data for cross validation
             k_fold_indices = get_k_fold_indices(10, x_tr, y_tr)
             print('Grid: ' + str(grid))
             for train_indeces, validation_indeces in k_fold_indices:
