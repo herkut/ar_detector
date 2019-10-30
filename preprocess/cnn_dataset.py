@@ -20,17 +20,17 @@ class ARCNNDataset(Dataset):
         self.sequences_directory = os.path.join(Config.cnn_dataset_directory)
 
         self.idx = idx
-        self.labels = np.reshape(labels, (-1, 1))
+        self.labels = labels
 
     def __getitem__(self, index):
         tmp_sequence = np.load(os.path.join(self.sequences_directory, self.idx[index] + '.npz'))
-        sequence = torch.from_numpy(tmp_sequence['arr_0'])
-        labels = torch.from_numpy(self.labels[index]).long()
-
+        sequence = torch.from_numpy(tmp_sequence['arr_0'].transpose())
+        tmp = np.array(self.labels[index], dtype=np.long)
+        labels = torch.from_numpy(tmp)
         return (sequence, labels)
 
     def __len__(self):
-        return labels.shape[0]
+        return self.labels.shape[0]
 
 
 class CNNDataset(Dataset):
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         tr_dataset = ARCNNDataset(idx[train_index], labels[train_index], target_drug)
         tr_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
         te_dataset = ARCNNDataset(idx[test_index], labels[test_index], target_drug)
-        te_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
+        te_dataloader = torch.utils.data.DataLoader(te_dataset, batch_size=64)
 
         start = timeit.default_timer()
         for i_batch, sample_batched in enumerate(tr_dataloader):
