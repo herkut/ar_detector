@@ -6,7 +6,8 @@ from config import Config
 from models.base_ar_detector import BaseARDetector
 from preprocess.cnn_dataset import ARCNNDataset
 from preprocess.feature_label_preparer import FeatureLabelPreparer
-from utils.helper_functions import get_index_to_remove, get_k_fold
+from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports
+from utils.helper_functions import get_index_to_remove, get_k_fold, create_hyperparameter_space_for_cnn
 import numpy as np
 
 
@@ -200,7 +201,8 @@ class ConvNet1D(torch.nn.Module):
 
 
 class ARDetectorCNN(BaseARDetector):
-    def __init__(self, feature_size, first_in_channel, hyperparameters, antibiotic_name=None, model_name='cnn', class_weights=None):
+    # TODO convert multilabel classifier and use only samples which have label for all antibiotics
+    def __init__(self, feature_size, first_in_channel, antibiotic_name=None, model_name='cnn', class_weights=None):
         # self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
             gpu_count = torch.cuda.device_count()
@@ -211,6 +213,12 @@ class ARDetectorCNN(BaseARDetector):
             self._device = torch.device("cuda:" + str(least_used_gpu))
         else:
             self._device = "cpu"
+
+        self._feature_size = feature_size
+        self._first_in_channel = first_in_channel
+        self._antibiotic_name = antibiotic_name
+        self._model_name = model_name
+        self._class_weights = class_weights
 
     def _initialize_model(self, device, feature_size, first_in_channel, class_weights, hyperparameters):
         """
@@ -268,8 +276,92 @@ class ARDetectorCNN(BaseARDetector):
     def save_model(self):
         pass
 
-    def tune_hyperparameters(self, param_grid, x_tr, y_tr):
-        pass
+    def tune_hyperparameters(self, param_grid, idx, labels):
+        hyperparameter_space = create_hyperparameter_space_for_cnn(param_grid)
+
+        cv_results = {'grids': [], 'training_results': [], 'validation_results': []}
+        for grid in hyperparameter_space:
+            bs = grid['batch_size']
+            cv_results['grids'].append(grid)
+            cv_result = {'training_results': [], 'validation_results': []}
+
+            cv = get_k_fold(10)
+
+            for tr_index, val_index in cv.split(idx, labels):
+                # Training dataset
+                tr_dataset = ARCNNDataset(idx[tr_index], labels[tr_index], self._antibiotic_name)
+                tr_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=bs)
+
+                # Validation dataset
+                val_dataset = ARCNNDataset(idx[val_index], labels[val_index], self._antibiotic_name)
+                val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=bs)
+
+                # initialize the convolutional model
+                model, criterion, optimizer = self._initialize_model(self._device,
+                                                                     self._feature_size,
+                                                                     self._first_in_channel,
+                                                                     self._class_weights,
+                                                                     grid)
+                # TODO define early stopping mechanism
+                for epoch in range(200):
+                    # Training
+                    model.train()
+                    tr_loss = 0
+                    training_results = None
+                    for i, data in enumerate(tr_dataloader):
+                        inputs, labels = data
+                        inputs = inputs.to(self._device)
+                        labels = labels.to(self._device)
+
+                        # initialization of gradients
+                        optimizer.zero_grad()
+                        # Forward propagation
+                        y_hat = conv_net(inputs.float())
+                        pred = torch.argmax(y_hat, dim=1)
+                        # Computation of cost function
+                        cost = criterion(y_hat, labels)
+                        # Back propagation
+                        cost.backward()
+                        # Update parameters
+                        optimizer.step()
+
+                        # Reporting
+                        tr_loss += cost
+                        tmp_classification_report = classification_report(labels, pred)
+                        if training_results is None:
+                            training_results = tmp_classification_report
+                        else:
+                            training_results = concatenate_classification_reports(training_results,
+                                                                                  tmp_classification_report)
+                    training_results['loss'] = tr_loss
+
+                    # Validation
+                    model.eval()
+                    val_loss = 0
+                    validation_results = None
+                    for i, data in enumerate(val_dataloader):
+                        inputs, labels = data
+                        inputs = inputs.to(self._device)
+                        labels = labels.to(self._device)
+
+                        # Forward propagation
+                        y_hat = conv_net(inputs.float())
+                        pred = torch.argmax(y_hat, dim=1)
+                        # Computation of cost function
+                        cost = criterion(y_hat, labels)
+
+                        # Reporting
+                        val_loss += cost
+                        tmp_classification_report = classification_report(labels, pred)
+                        if validation_results is None:
+                            validation_results = tmp_classification_report
+                        else:
+                            validation_results = concatenate_classification_reports(validation_results,
+                                                                                    tmp_classification_report)
+                    validation_results['loss'] = val_loss
+
+                    # Training has been completed
+                    # Validate model with best weights gotten by early stopping
 
     def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
         pass
