@@ -1,15 +1,22 @@
+import collections
+import json
 import os
 
 import torch
+from sklearn.metrics import confusion_matrix
 
 from config import Config
 from models.base_ar_detector import BaseARDetector
 from models.pytorch_models.early_stopping import EarlyStopping
 from preprocess.cnn_dataset import ARCNNDataset
 from preprocess.feature_label_preparer import FeatureLabelPreparer
-from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports
+from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports, \
+    plot_confusion_matrix
 from utils.helper_functions import get_index_to_remove, get_k_fold, create_hyperparameter_space_for_cnn
 import numpy as np
+import matplotlib.pyplot as plt
+from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
+import pandas as pd
 
 
 class ConvNet1D(torch.nn.Module):
@@ -163,8 +170,8 @@ class ConvNet1D(torch.nn.Module):
 
         # fc
         for i in range(len(self.fcs)):
-            if i ==0:
-                # like flatten
+            if i == 0:
+                # like flatten in keras
                 x = self.fcs[i](x.view(-1, x.shape[1]*x.shape[2]))
             else:
                 x = self.fcs[i](x)
@@ -283,7 +290,25 @@ class ARDetectorCNN(BaseARDetector):
         return model, criterion, optimizer
 
     def load_model(self):
-        pass
+        with open(os.path.join(self._results_directory,
+                               'best_models',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json')) as fp:
+            best_hyperparameters = json.load(fp)
+
+        model, _, _ = self._initialize_model(self._device,
+                                       self._feature_size,
+                                       self._first_in_channel,
+                                       self._class_weights,
+                                       best_hyperparameters)
+        model.load_state_dict(torch.load(os.path.join(self._results_directory,
+                                                      'best_models',
+                                                      self._target_directory,
+                                                      self._model_name + '_' + self._antibiotic_name + '.pt')))
+        model.to(self._device)
+        model.eval()
+
+        self._best_model = model
 
     def save_model(self):
         pass
@@ -385,7 +410,11 @@ class ARDetectorCNN(BaseARDetector):
                                                                      self._first_in_channel,
                                                                      self._class_weights,
                                                                      grid)
-                # TODO define early stopping mechanism
+
+                # create the directory holding checkpoints if not exists
+                if not os.path.exists(os.path.join(self._results_directory, 'checkpoints')):
+                    os.makedirs(os.path.join(self._results_directory, 'checkpoints'))
+
                 es = EarlyStopping(metric='loss',
                                    mode='min',
                                    patience=10,
@@ -413,16 +442,130 @@ class ARDetectorCNN(BaseARDetector):
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
 
-            # TODO save results for cross validation into file and chose best hyperparameters and save them in file as well
+            if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
+                os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
-    def train_best_model(self, hyperparameters, x_tr, y_tr, x_te, y_te):
-        pass
+            with open(os.path.join(self._results_directory,
+                                   'grid_search_scores',
+                                   self._target_directory,
+                                   self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
+                json.dump(cv_results, fp)
+
+            best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
+
+            if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+                os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
+
+            with open(os.path.join(self._results_directory,
+                                   'best_models',
+                                   self._target_directory,
+                                   self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
+                json.dump(best_hyperparameters, fp)
+
+    def train_best_model(self, hyperparameters, idx_tr, labels_tr, idx_te, labels_te):
+        bs = hyperparameters['batch_size']
+
+        dataset_tr = ARCNNDataset(idx_tr, labels_tr, self._antibiotic_name)
+        dataloader_tr = torch.utils.data.DataLoader(dataset_tr, batch_size=bs)
+
+        dataset_te = ARCNNDataset(idx_te, labels_te, self._antibiotic_name)
+        dataloader_te = torch.utils.data.DataLoader(dataset_te, batch_size=bs)
+
+        model, criterion, optimizer = self._initialize_model(self._device,
+                                                             self._feature_size,
+                                                             self._first_in_channel,
+                                                             self._class_weights,
+                                                             hyperparameters)
+
+        # create the directory holding checkpoints if not exists
+        if not os.path.exists(os.path.join(self._results_directory, 'checkpoints')):
+            os.makedirs(os.path.join(self._results_directory, 'checkpoints'))
+
+        es = EarlyStopping(metric='loss',
+                           mode='min',
+                           patience=10,
+                           checkpoint_file=os.path.join(self._results_directory,
+                                                        'best_models',
+                                                        self._target_directory,
+                                                        self._model_name + '_' + self._antibiotic_name + '.pt'))
+
+        self._train_model(model, criterion, optimizer, es, dataloader_tr, dataloader_te)
 
     def predict_ar(self, x):
         pass
 
-    def test_model(self, x_te, y_te):
-        pass
+    def test_model(self, idx, labels):
+        self._best_model.to(self._device)
+
+        self._best_model.eval()
+
+        dataset = ARCNNDataset(idx, labels, self._antibiotic_name)
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=64)
+
+        pred = None
+        actual_labels = None
+
+        for i, data in enumerate(dataloader):
+            inputs, batch_labels = data
+            inputs = inputs.to(self._device)
+
+            if actual_labels is None:
+                actual_labels = batch_labels
+            else:
+                torch.cat((actual_labels, batch_labels), 0)
+
+            y_hat = self._best_model(inputs)
+            if pred is None:
+                pred = torch.argmax(y_hat, dim=1)
+            else:
+                pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
+
+        y_pred = pred.cpu().numpy()
+
+        cm = confusion_matrix(labels, y_pred)
+        if np.shape(cm)[0] == 2 and np.shape(cm)[1] == 2:
+            sensitivity = float(cm[0][0]) / np.sum(cm[0])
+            specificity = float(cm[1][1]) / np.sum(cm[1])
+            print('For ' + self._antibiotic_name)
+            print(collections.Counter(labels))
+            print('Sensitivity: ' + str(sensitivity))
+            print('Specificity: ' + str(specificity))
+        else:
+            print('For ' + self._antibiotic_name)
+            print('There has been an error in calculating sensitivity and specificity')
+
+        plot_confusion_matrix(labels,
+                              y_pred,
+                              classes=['susceptible', 'resistant'],
+                              normalize=True,
+                              title='Normalized confusion matrix')
+
+        if not os.path.exists(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'confusion_matrices', self._target_directory))
+
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 'normalized_' + self._model_name + '_' + self._antibiotic_name + '.png'))
+
+        plot_confusion_matrix(labels,
+                              y_pred,
+                              classes=['susceptible', 'resistant'],
+                              normalize=False,
+                              title='Confusion matrix')
+
+        plt.savefig(os.path.join(self._results_directory,
+                                 'confusion_matrices',
+                                 self._target_directory,
+                                 self._model_name + '_' + self._antibiotic_name + '.png'))
+
+        y_true = pd.Series(labels, name="Actual")
+        y_pred = pd.Series(y_pred, name="Predicted")
+        df_confusion = pd.crosstab(y_true, y_pred)
+        df_confusion.to_csv(os.path.join(self._results_directory,
+                                         'confusion_matrices',
+                                         self._target_directory,
+                                         self._model_name + '_' + self._antibiotic_name + '.csv'))
 
 
 if __name__ == '__main__':
