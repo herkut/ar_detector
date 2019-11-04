@@ -211,6 +211,7 @@ class ModelManager:
                 self.test_ar_detector(ar_detector,
                                       x_test,
                                       y_test)
+
     def test_best_models(self, feature_selection, raw_feature_matrix, raw_labels):
         for i in range(len(Config.target_drugs)):
             x, y = self.filter_out_nan(raw_feature_matrix, raw_labels[Config.target_drugs[i]])
