@@ -1,6 +1,7 @@
 {
+  "batch_normalization": ["True"],
   "batch_sizes": [64, 512, 1024],
-  "optimizers": ["Adam", "Nadam"],
+  "optimizers": ["Adam", "RMSProp"],
   "learning_rates": [0.01, 0.001],
   "conv_kernels": [[16, 32]],
   "conv_channels": [[64, 128]],

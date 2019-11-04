@@ -2,10 +2,13 @@ import os
 
 from docopt import docopt
 
+from models.cnn_model_manager import CNNModelManager
 from models.model_manager import ModelManager
 from preprocess.feature_label_preparer import FeatureLabelPreparer
+from utils.helper_functions import get_index_to_remove
 from utils.statistical_tests.experiment_executor import ExperimentExecutor
 from config import Config
+import numpy as np
 
 
 def get_labels_and_raw_feature_selections(dataset):
@@ -43,6 +46,9 @@ def main():
         run.py tune_hyperparameters <configuration_file> <models> [--data_representation=<data_representation>]
         run.py train_best_models <configuration_file> <models> [--data_representation=<data_representation>]
         run.py test_best_models <configuration_file> <models> [--data_representation=<data_representation>]
+        run.py cnn_tune_hyperparameters <configuration_file> <models>
+        run.py cnn_train_best_models <configuration_file> <models>
+        run.py cnn_test_best_models <configuration_file> <models>
         run.py execute_experiments <configuration_file> <models> [--data_representation=<data_representation>]
         run.py select_best_model <configuration_file> <directory_containing_results>
         
@@ -111,6 +117,27 @@ def main():
             raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory, label_file))
             raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
             model_manager.train_and_test_best_models(k, raw_feature_matrix, raw_label_matrix)
+
+    elif args['cnn_tune_hyperparameters']:
+        models = args['<models>']
+        # TODO use cnn model manager
+        cnn_model_manager = CNNModelManager(models, dataset)
+
+        cnn_model_manager.tune_train_and_test_models()
+
+    elif args['cnn_train_best_models']:
+        models = args['<models>']
+        # TODO use cnn model manager
+        cnn_model_manager = CNNModelManager(models, dataset)
+
+        cnn_model_manager.train_and_test_best_models()
+
+    elif args['cnn_test_best_models']:
+        models = args['<models>']
+        # TODO use cnn model manager
+        cnn_model_manager = CNNModelManager(models, dataset)
+
+        cnn_model_manager.test_best_models()
 
     elif args['execute_experiments']:
         models = args['<models>']

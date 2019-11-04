@@ -4,6 +4,9 @@ import yaml
 class Config:
     dataset_directory = None
     cnn_dataset_directory = None
+    cnn_feature_size = None
+    cnn_first_in_channel = None
+    cnn_output_size = None
     base_directory = None
     results_directory = None
     hyperparameter_grids_directory = None
@@ -21,6 +24,9 @@ class Config:
         raw = yaml.safe_load(cfg)
         cls.dataset_directory = raw['dataset_directory']
         cls.cnn_dataset_directory = raw['cnn_dataset_directory']
+        cls.cnn_feature_size = raw['cnn_feature_size']
+        cls.cnn_first_in_channel = raw['cnn_first_in_channel']
+        cls.cnn_output_size = raw['cnn_output_size']
         cls.base_directory = raw['base_directory']
         cls.results_directory = raw['results_directory']
         cls.dataset_index_directory = raw['dataset_index_directory']

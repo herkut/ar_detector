@@ -210,7 +210,7 @@ class ConvNet1D(torch.nn.Module):
 
 class ARDetectorCNN(BaseARDetector):
     # TODO convert multilabel classifier and use only samples which have label for all antibiotics
-    def __init__(self, feature_size, first_in_channel, antibiotic_name=None, model_name='cnn', class_weights=None):
+    def __init__(self, feature_size, first_in_channel, output_size, antibiotic_name=None, model_name='cnn', class_weights=None):
         self._results_directory = Config.results_directory
         self._dataset = Config.cnn_target_dataset
         self._results_directory = self._results_directory + '_' + self._dataset
@@ -228,6 +228,7 @@ class ARDetectorCNN(BaseARDetector):
 
         self._feature_size = feature_size
         self._first_in_channel = first_in_channel
+        self._output_size = output_size
         self._antibiotic_name = antibiotic_name
         self._model_name = model_name
         if class_weights is not None:
@@ -239,7 +240,7 @@ class ARDetectorCNN(BaseARDetector):
 
         self._target_directory = self._model_name + '_' + self._scoring + '_' + self._label_tags
 
-    def _initialize_model(self, device, feature_size, first_in_channel, class_weights, hyperparameters):
+    def _initialize_model(self, device, feature_size, first_in_channel, output_size, class_weights, hyperparameters):
         """
         feature_size,
         output_size,
@@ -266,9 +267,9 @@ class ARDetectorCNN(BaseARDetector):
                           hyperparameters['pooling_strides'],
                           hyperparameters['fc_hidden_units'],
                           hyperparameters['fc_activation_functions'],
-                          hyperparameters['fc_dropout'],
+                          hyperparameters['fc_dropout_rate'],
                           batch_normalization=True,
-                          pooling_type=hyperparameters['pooling_types'])
+                          pooling_type=hyperparameters['pooling_type'])
         model.to(device)
 
         if class_weights is not None:
@@ -277,13 +278,13 @@ class ARDetectorCNN(BaseARDetector):
             criterion = torch.nn.NLLLoss(reduction='mean')
 
         if hyperparameters['optimizer'] == 'Adam':
-            optimizer = torch.optim.Adam(conv_net.parameters(), lr=learning_rate)
+            optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters['learning_rate'])
         elif hyperparameters['optimizer'] == 'SGD':
-            optimizer = torch.optim.SGD(conv_net.parameters(), lr=learning_rate)
+            optimizer = torch.optim.SGD(model.parameters(), lr=hyperparameters['learning_rate'])
         elif hyperparameters['optimizer'] == 'Adamax':
-            optimizer = torch.optim.Adamax(conv_net.parameters(), lr=learning_rate)
+            optimizer = torch.optim.Adamax(model.parameters(), lr=hyperparameters['learning_rate'])
         elif hyperparameters['optimizer'] == 'RMSProp':
-            optimizer = torch.optim.RMSProp(conv_net.parameters(), lr=learning_rate)
+            optimizer = torch.optim.RMSProp(model.parameters(), lr=hyperparameters['learning_rate'])
         else:
             raise Exception('Not implemented optimizer: ' + hyperparameters['optimizer'])
 
@@ -297,10 +298,11 @@ class ARDetectorCNN(BaseARDetector):
             best_hyperparameters = json.load(fp)
 
         model, _, _ = self._initialize_model(self._device,
-                                       self._feature_size,
-                                       self._first_in_channel,
-                                       self._class_weights,
-                                       best_hyperparameters)
+                                             self._feature_size,
+                                             self._first_in_channel,
+                                             self._output_size,
+                                             self._class_weights,
+                                             best_hyperparameters)
         model.load_state_dict(torch.load(os.path.join(self._results_directory,
                                                       'best_models',
                                                       self._target_directory,
@@ -325,7 +327,7 @@ class ARDetectorCNN(BaseARDetector):
             # initialization of gradients
             optimizer.zero_grad()
             # Forward propagation
-            y_hat = conv_net(inputs.float())
+            y_hat = model(inputs.float())
             pred = torch.argmax(y_hat, dim=1)
             # Computation of cost function
             cost = criterion(y_hat, labels)
@@ -355,7 +357,7 @@ class ARDetectorCNN(BaseARDetector):
             labels = labels.to(self._device)
 
             # Forward propagation
-            y_hat = conv_net(inputs.float())
+            y_hat = model(inputs.float())
             pred = torch.argmax(y_hat, dim=1)
             # Computation of cost function
             cost = criterion(y_hat, labels)
@@ -408,6 +410,7 @@ class ARDetectorCNN(BaseARDetector):
                 model, criterion, optimizer = self._initialize_model(self._device,
                                                                      self._feature_size,
                                                                      self._first_in_channel,
+                                                                     self._output_size,
                                                                      self._class_weights,
                                                                      grid)
 
@@ -428,6 +431,7 @@ class ARDetectorCNN(BaseARDetector):
                 model, criterion, _ = self._initialize_model(self._device,
                                                              self._feature_size,
                                                              self._first_in_channel,
+                                                             self._output_size,
                                                              self._class_weights,
                                                              grid)
                 model.load_state_dict(torch.load(os.path.join(self._results_directory,
@@ -474,6 +478,7 @@ class ARDetectorCNN(BaseARDetector):
         model, criterion, optimizer = self._initialize_model(self._device,
                                                              self._feature_size,
                                                              self._first_in_channel,
+                                                             self._output_size,
                                                              self._class_weights,
                                                              hyperparameters)
 
@@ -566,113 +571,3 @@ class ARDetectorCNN(BaseARDetector):
                                          'confusion_matrices',
                                          self._target_directory,
                                          self._model_name + '_' + self._antibiotic_name + '.csv'))
-
-
-if __name__ == '__main__':
-    feature_size = 37733
-    first_in_channel = 5
-    output_size = 2
-    optimizer = 'Adam'
-    learning_rate = 0.001
-
-    configuration_file = '/home/herkut/Desktop/ar_detector/configurations/conf.yml'
-    raw = open(configuration_file)
-    Config.initialize_configurations(raw)
-
-    raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory,
-                                                                              'sorted_labels_dataset-ii.csv'))
-
-    target_drug = Config.target_drugs[0]
-
-    non_existing = []
-    predefined_file_to_remove = ['8316-09', 'NL041']
-
-    index_to_remove = get_index_to_remove(raw_label_matrix[target_drug])
-
-    for ne in predefined_file_to_remove:
-        if ne not in index_to_remove:
-            non_existing.append(ne)
-
-    raw_label_matrix.drop(index_to_remove, inplace=True)
-    raw_label_matrix.drop(non_existing, inplace=True)
-
-    idx = raw_label_matrix.index
-    labels = raw_label_matrix[target_drug].values
-
-    unique, counts = np.unique(labels, return_counts=True)
-
-    # class_weights = {0: counts[1] / (counts[0] + counts[1]), 1: counts[0] / (counts[0] + counts[1])}
-    class_weights = {0: np.max(counts) / counts[0], 1: np.max(counts) / counts[1]}
-    class_weights = np.array(list(class_weights.items()), dtype=np.float32)[:, 1]
-    ##############################################
-    #                                            #
-    #       Convolutional Neural Network         #
-    #                                            #
-    ##############################################
-    """
-    feature_size,
-    output_size,
-    conv_kernels,
-    conv_channels,
-    conv_strides,
-    conv_activation_functions,
-    fc_hidden_units,
-    fc_activation_functions,
-    fc_dropout_rate,
-    batch_normalization=False,
-    pooling_type=None
-    """
-    conv_net = ConvNet1D(feature_size,
-                         first_in_channel,
-                         output_size,
-                         [16, 32],
-                         [64, 128],
-                         [1, 1],
-                         ['relu', 'relu'],
-                         [None, 13],
-                         [None, 13],
-                         [1024, 256],
-                         ['relu', 'relu'],
-                         0,
-                         batch_normalization=True,
-                         pooling_type='max')
-    criterion = torch.nn.NLLLoss(reduction='mean', weight=torch.from_numpy(class_weights))
-    if optimizer == 'Adam':
-        optimizer = torch.optim.Adam(conv_net.parameters(), lr=learning_rate)
-    elif optimizer == 'SGD':
-        optimizer = torch.optim.SGD(conv_net.parameters(), lr=learning_rate)
-    elif optimizer == 'Adamax':
-        optimizer = torch.optim.Adamax(conv_net.parameters(), lr=learning_rate)
-    elif optimizer == 'RMSProp':
-        optimizer = torch.optim.RMSProp(conv_net.parameters(), lr=learning_rate)
-    else:
-        raise Exception('Not implemented optimizer: ' + optimizer)
-
-    print(conv_net)
-
-    cv = get_k_fold(10)
-
-    for train_index, test_index in cv.split(idx, labels):
-        tr_dataset = ARCNNDataset(idx[train_index], labels[train_index], target_drug)
-        tr_dataloader = torch.utils.data.DataLoader(tr_dataset, batch_size=64)
-        te_dataset = ARCNNDataset(idx[test_index], labels[test_index], target_drug)
-        te_dataloader = torch.utils.data.DataLoader(te_dataset, batch_size=64)
-
-        training_results = None
-        training_loss = 0.0
-        for epoch in range(20):
-            for i, data in enumerate(tr_dataloader):
-                inputs, labels = data
-                # initialization of gradients
-                optimizer.zero_grad()
-                # Forward propagation
-                y_hat = conv_net(inputs.float())
-                pred = torch.argmax(y_hat, dim=1)
-                # Computation of cost function
-                cost = criterion(y_hat, labels)
-                # Back propagation
-                cost.backward()
-                # Update parameters
-                optimizer.step()
-
-                training_loss += cost
