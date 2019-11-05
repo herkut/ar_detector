@@ -12,7 +12,8 @@ from preprocess.cnn_dataset import ARCNNDataset
 from preprocess.feature_label_preparer import FeatureLabelPreparer
 from utils.confusion_matrix_drawer import classification_report, concatenate_classification_reports, \
     plot_confusion_matrix
-from utils.helper_functions import get_index_to_remove, get_k_fold, create_hyperparameter_space_for_cnn
+from utils.helper_functions import get_index_to_remove, get_k_fold, create_hyperparameter_space_for_cnn, \
+    get_least_used_cuda_device
 import numpy as np
 import matplotlib.pyplot as plt
 from utils.statistical_tests.statistical_tests import choose_best_hyperparameters
@@ -27,6 +28,7 @@ class ConvNet1D(torch.nn.Module):
                  conv_kernels,
                  conv_channels,
                  conv_strides,
+                 conv_paddings,
                  conv_activation_functions,
                  pooling_kernels,
                  pooling_strides,
@@ -62,6 +64,7 @@ class ConvNet1D(torch.nn.Module):
         self.kernels = conv_kernels  # kernel_sizes
         self.channels = conv_channels  # channels
         self.strides = conv_strides  # strides
+        self.conv_paddings = conv_paddings
         self.convs = []
         self.conv_bns = []
         self.conv_afs = conv_activation_functions
@@ -90,16 +93,30 @@ class ConvNet1D(torch.nn.Module):
         # Convolutional layers
         for i in range(len(self.kernels)):
             if not self.convs:
-                self.convs.append(torch.nn.Conv1d(self.first_in_channel,
-                                                  self.channels[i],
-                                                  self.kernels[i],
-                                                  stride=self.strides[i]))
+                if self.conv_paddings[i] is None:
+                    self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                                      self.channels[i],
+                                                      self.kernels[i],
+                                                      stride=self.strides[i]))
+                else:
+                    self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                                      self.channels[i],
+                                                      self.kernels[i],
+                                                      stride=self.strides[i],
+                                                      padding=conv_paddings[i]))
                 setattr(self, 'conv%i' % i, self.convs[i])
             else:
-                self.convs.append(torch.nn.Conv1d(self.channels[i-1],
-                                                  self.channels[i],
-                                                  self.kernels[i],
-                                                  stride=self.strides[i]))
+                if self.conv_paddings[i] is None:
+                    self.convs.append(torch.nn.Conv1d(self.channels[i-1],
+                                                      self.channels[i],
+                                                      self.kernels[i],
+                                                      stride=self.strides[i]))
+                else:
+                    self.convs.append(torch.nn.Conv1d(self.channels[i-1],
+                                                      self.channels[i],
+                                                      self.kernels[i],
+                                                      stride=self.strides[i],
+                                                      padding=self.conv_paddings[i]))
                 setattr(self, 'conv%i' % i, self.convs[i])
 
             if self.do_bn:
@@ -198,9 +215,15 @@ class ConvNet1D(torch.nn.Module):
         # convolutional layers
         for i in range(len(self.kernels)):
             if i == 0:
-                output_width = (self.feature_size - self.kernels[i] + 2 * 0) / self.strides[i] + 1
+                if self.conv_paddings[i] is None:
+                    output_width = (self.feature_size - self.kernels[i] + 2 * 0) / self.strides[i] + 1
+                else:
+                    output_width = (self.feature_size - self.kernels[i] + 2 * self.conv_paddings[i]) / self.strides[i] + 1
             else:
-                output_width = (output_width - self.kernels[i] + 2 * 0) / self.strides[i] + 1
+                if self.conv_paddings[i] is None:
+                    output_width = (output_width - self.kernels[i] + 2 * 0) / self.strides[i] + 1
+                else:
+                    output_width = (output_width - self.kernels[i] + 2 * self.conv_paddings[i]) / self.strides[i] + 1
             # pooling
             if self.poolings[i] is not None:
                 output_width = (output_width - self.poolings[i].kernel_size + 2 * self.poolings[i].padding) / self.poolings[i].stride + 1
@@ -217,12 +240,12 @@ class ARDetectorCNN(BaseARDetector):
 
         # self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
-            gpu_count = torch.cuda.device_count()
-            gpu_usages = np.zeros(gpu_count)
-            for i in range(gpu_count):
-                gpu_usages[i] = torch.cuda.memory_allocated(i)
-            least_used_gpu = np.argmin(gpu_usages)
-            self._device = torch.device("cuda:" + str(least_used_gpu))
+            # TODO do below
+            # instead of setting visible devices to least used cuda device
+            # set visible devices with all cuda devices and use the least used one
+            cuda_env_var, least_used_cuda = get_least_used_cuda_device()
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(least_used_cuda)
+            self._device = torch.device("cuda:0")
         else:
             self._device = "cpu"
 
@@ -262,6 +285,7 @@ class ARDetectorCNN(BaseARDetector):
                           hyperparameters['conv_kernels'],
                           hyperparameters['conv_channels'],
                           hyperparameters['conv_strides'],
+                          hyperparameters['conv_paddings'],
                           hyperparameters['conv_activation_functions'],
                           hyperparameters['pooling_kernels'],
                           hyperparameters['pooling_strides'],
@@ -351,25 +375,26 @@ class ARDetectorCNN(BaseARDetector):
         model.eval()
         val_loss = 0
         validation_results = None
-        for i, data in enumerate(dataloader):
-            inputs, labels = data
-            inputs = inputs.to(self._device)
-            labels = labels.to(self._device)
+        with torch.no_grad():
+            for i, data in enumerate(dataloader):
+                inputs, labels = data
+                inputs = inputs.to(self._device)
+                labels = labels.to(self._device)
 
-            # Forward propagation
-            y_hat = model(inputs.float())
-            pred = torch.argmax(y_hat, dim=1)
-            # Computation of cost function
-            cost = criterion(y_hat, labels)
+                # Forward propagation
+                y_hat = model(inputs.float())
+                pred = torch.argmax(y_hat, dim=1)
+                # Computation of cost function
+                cost = criterion(y_hat, labels)
 
-            # Reporting
-            val_loss += cost
-            tmp_classification_report = classification_report(labels, pred)
-            if validation_results is None:
-                validation_results = tmp_classification_report
-            else:
-                validation_results = concatenate_classification_reports(validation_results,
-                                                                        tmp_classification_report)
+                # Reporting
+                val_loss += cost
+                tmp_classification_report = classification_report(labels, pred)
+                if validation_results is None:
+                    validation_results = tmp_classification_report
+                else:
+                    validation_results = concatenate_classification_reports(validation_results,
+                                                                            tmp_classification_report)
         validation_results['loss'] = val_loss
         return validation_results
 
@@ -377,10 +402,11 @@ class ARDetectorCNN(BaseARDetector):
         for epoch in range(200):
             # Training
             tr_results = self._training_step(model, criterion, optimizer, tr_dataloader)
+            print(str(epoch) + ': tr loss ' + str(tr_results['loss']))
 
             # Validation
             val_results = self._validate_model(model, criterion, val_dataloader)
-
+            print(str(epoch) + ': val loss ' + str(val_results['loss']))
             if es.step(epoch, val_results, model):
                 # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
                 print('Epoch: ' + str(es.best_index) + ', best metrics: ' + str(es.best_metrics))
@@ -391,6 +417,7 @@ class ARDetectorCNN(BaseARDetector):
 
         cv_results = {'grids': [], 'training_results': [], 'validation_results': []}
         for grid in hyperparameter_space:
+            print('Grid: ' + str(grid))
             bs = grid['batch_size']
             cv_results['grids'].append(grid)
             cv_result = {'training_results': [], 'validation_results': []}
