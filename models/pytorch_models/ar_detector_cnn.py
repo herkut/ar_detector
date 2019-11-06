@@ -423,6 +423,7 @@ class ARDetectorCNN(BaseARDetector):
             # Validation
             val_results = self._validate_model(model, criterion, val_dataloader)
             print(str(epoch) + ': val loss ' + str(val_results['loss']))
+
             if es.step(epoch, val_results, model):
                 # print('Early stopping at epoch: ' + str(epoch) + ' best index: ' + str(es.best_index))
                 print('Epoch: ' + str(es.best_index) + ', best metrics: ' + str(es.best_metrics))
@@ -466,7 +467,8 @@ class ARDetectorCNN(BaseARDetector):
                                    patience=10,
                                    checkpoint_file=os.path.join(self._results_directory,
                                                                 'checkpoints',
-                                                                self._model_name + '_checkpoint.pt'))
+                                                                self._model_name + '_checkpoint.pt'),
+                                   required_min_iteration=15)
 
                 self._train_model(model, criterion, optimizer, es, tr_dataloader, val_dataloader)
                 # Training has been completed
@@ -489,25 +491,25 @@ class ARDetectorCNN(BaseARDetector):
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
 
-            if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
-                os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
+        if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
-            with open(os.path.join(self._results_directory,
-                                   'grid_search_scores',
-                                   self._target_directory,
-                                   self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
-                json.dump(cv_results, fp)
+        with open(os.path.join(self._results_directory,
+                               'grid_search_scores',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
+            json.dump(cv_results, fp)
 
-            best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
+        best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
 
-            if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
-                os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
+        if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
+            os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
 
-            with open(os.path.join(self._results_directory,
-                                   'best_models',
-                                   self._target_directory,
-                                   self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
-                json.dump(best_hyperparameters, fp)
+        with open(os.path.join(self._results_directory,
+                               'best_models',
+                               self._target_directory,
+                               self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
+            json.dump(best_hyperparameters, fp)
 
     def train_best_model(self, hyperparameters, idx_tr, labels_tr, idx_te, labels_te):
         bs = hyperparameters['batch_size']
@@ -535,7 +537,8 @@ class ARDetectorCNN(BaseARDetector):
                            checkpoint_file=os.path.join(self._results_directory,
                                                         'best_models',
                                                         self._target_directory,
-                                                        self._model_name + '_' + self._antibiotic_name + '.pt'))
+                                                        self._model_name + '_' + self._antibiotic_name + '.pt'),
+                           required_min_iteration=15)
 
         self._train_model(model, criterion, optimizer, es, dataloader_tr, dataloader_te)
 
