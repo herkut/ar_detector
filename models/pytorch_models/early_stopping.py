@@ -2,7 +2,7 @@ import torch
 
 
 class EarlyStopping(object):
-    def __init__(self, metric='loss', mode='min', min_delta=0, patience=10, checkpoint_file='/tmp/dnn_checkpoint.pt'):
+    def __init__(self, metric='loss', mode='min', min_delta=0, patience=10, checkpoint_file='/tmp/dnn_checkpoint.pt', required_min_iteration=0):
         """
 
         :param metric: loss, accuracy, f1, sensitivity, specificity, precision
@@ -15,6 +15,7 @@ class EarlyStopping(object):
         self.min_delta = min_delta
         self.patience = patience
         self.bad_epoch_count = 0
+        self.required_min_iteration = required_min_iteration
         self.best_index = None
         self.best_metrics = None
         self.best_model = None
@@ -40,7 +41,8 @@ class EarlyStopping(object):
                     self.save_checkpoint(epoch, results, model)
                 else:
                     self.bad_epoch_count += 1
-            if self.bad_epoch_count > self.patience:
+            # Prevent early stopping before min iteration would be done in training
+            if self.bad_epoch_count > self.patience and epoch > self.required_min_iteration:
                 return True
             else:
                 return False
