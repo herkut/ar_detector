@@ -32,6 +32,7 @@ class ConvNet1D(torch.nn.Module):
                  conv_activation_functions,
                  pooling_kernels,
                  pooling_strides,
+                 pooling_paddings,
                  fc_hidden_units,
                  fc_activation_functions,
                  fc_dropout_rate,
@@ -48,6 +49,7 @@ class ConvNet1D(torch.nn.Module):
         :param conv_activation_functions:
         :param pooling_kernels:
         :param pooling_strides:
+        :param pooling_paddings:
         :param fc_hidden_units:
         :param fc_activation_functions:
         :param fc_dropout_rate:
@@ -73,6 +75,7 @@ class ConvNet1D(torch.nn.Module):
         self.poolings = []
         self.pooling_kernels = pooling_kernels
         self.pooling_strides = pooling_strides
+        self.pooling_paddings = pooling_paddings
 
         if fc_dropout_rate > 0:
             self.do_dropout = True
@@ -129,10 +132,22 @@ class ConvNet1D(torch.nn.Module):
             # Pooling layer it is applied to just after all conv layers
             if self.pooling_type is not None and self.pooling_kernels[i] is not None and self.pooling_strides[i] is not None:
                 if self.pooling_type == 'max':
-                    self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i], stride=self.pooling_strides[i]))
+                    if self.pooling_paddings[i] is None:
+                        self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i],
+                                                                stride=self.pooling_strides[i]))
+                    else:
+                        self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i],
+                                                                stride=self.pooling_strides[i],
+                                                                padding=self.pooling_paddings[i]))
                     setattr(self, 'pool%i' % i, self.poolings[i])
                 elif self.pooling_type == 'average':
-                    self.pooling.append(torch.nn.AvgPool1d1d(self.pooling_kernels[i], stride=self.pooling_strides[i]))
+                    if self.pooling_paddings[i] is None:
+                        self.poolings.append(torch.nn.AvgPool1d1d(self.pooling_kernels[i],
+                                                                  stride=self.pooling_strides[i]))
+                    else:
+                        self.poolings.append(torch.nn.AvgPool1d1d(self.pooling_kernels[i],
+                                                                  stride=self.pooling_strides[i],
+                                                                  padding=self.pooling_paddings[i]))
                     setattr(self, 'pool%i' % i, self.poolings[i])
                 #TODO raise unknown pooling method
             else:
@@ -289,6 +304,7 @@ class ARDetectorCNN(BaseARDetector):
                           hyperparameters['conv_activation_functions'],
                           hyperparameters['pooling_kernels'],
                           hyperparameters['pooling_strides'],
+                          hyperparameters['pooling_paddings'],
                           hyperparameters['fc_hidden_units'],
                           hyperparameters['fc_activation_functions'],
                           hyperparameters['fc_dropout_rate'],
@@ -536,21 +552,21 @@ class ARDetectorCNN(BaseARDetector):
 
         pred = None
         actual_labels = None
+        with torch.no_grad():
+            for i, data in enumerate(dataloader):
+                inputs, batch_labels = data
+                inputs = inputs.to(self._device)
 
-        for i, data in enumerate(dataloader):
-            inputs, batch_labels = data
-            inputs = inputs.to(self._device)
+                if actual_labels is None:
+                    actual_labels = batch_labels
+                else:
+                    torch.cat((actual_labels, batch_labels), 0)
 
-            if actual_labels is None:
-                actual_labels = batch_labels
-            else:
-                torch.cat((actual_labels, batch_labels), 0)
-
-            y_hat = self._best_model(inputs)
-            if pred is None:
-                pred = torch.argmax(y_hat, dim=1)
-            else:
-                pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
+                y_hat = self._best_model(inputs)
+                if pred is None:
+                    pred = torch.argmax(y_hat, dim=1)
+                else:
+                    pred = torch.cat((pred, torch.argmax(y_hat, dim=1)), 0)
 
         y_pred = pred.cpu().numpy()
 
