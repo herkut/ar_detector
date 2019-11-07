@@ -387,7 +387,7 @@ class ARDetectorCNN(BaseARDetector):
         training_results['loss'] = tr_loss
         return training_results
 
-    def _validate_model(self, model, criterion, dataloader):
+    def _validate_model(self, model, criterion, dataloader, ignore_loss=False):
         model.eval()
         val_loss = 0
         validation_results = None
@@ -411,7 +411,8 @@ class ARDetectorCNN(BaseARDetector):
                 else:
                     validation_results = concatenate_classification_reports(validation_results,
                                                                             tmp_classification_report)
-        validation_results['loss'] = val_loss
+        if not ignore_loss:
+            validation_results['loss'] = val_loss
         return validation_results
 
     def _train_model(self, model, criterion, optimizer, es, tr_dataloader, val_dataloader):
@@ -484,9 +485,9 @@ class ARDetectorCNN(BaseARDetector):
                                                               self._model_name + '_checkpoint.pt')))
                 model.to(self._device)
                 # best model performance on training data for these data folds and hyperparameters
-                cv_result['training_results'].append(self._validate_model(model, criterion, tr_dataloader))
+                cv_result['training_results'].append(self._validate_model(model, criterion, tr_dataloader, ignore_loss=True))
                 # best model performance on validation data for these data folds and hyperparameters
-                cv_result['validation_results'].append(self._validate_model(model, criterion, val_dataloader))
+                cv_result['validation_results'].append(self._validate_model(model, criterion, val_dataloader, ignore_loss=True))
 
             cv_results['training_results'].append(cv_result['training_results'])
             cv_results['validation_results'].append(cv_result['validation_results'])
@@ -500,7 +501,7 @@ class ARDetectorCNN(BaseARDetector):
                                self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
             json.dump(cv_results, fp)
 
-        best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
+        best_hyperparameters = choose_best_hyperparameters(cv_results, metric=self._scoring)
 
         if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))

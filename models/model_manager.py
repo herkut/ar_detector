@@ -192,6 +192,7 @@ class ModelManager:
                     # convert class weight into numpy matrix
                     class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
                     ar_detector = ARDetectorDNN(feature_selection,
+                                                self.dataset,
                                                 antibiotic_name=Config.target_drugs[i],
                                                 model_name=model,
                                                 feature_size=x_train.shape[1],
@@ -276,6 +277,7 @@ class ModelManager:
                     # convert class weight into numpy matrix
                     class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
                     ar_detector = ARDetectorDNN(feature_selection,
+                                                self.dataset,
                                                 antibiotic_name=Config.target_drugs[i],
                                                 model_name=model,
                                                 feature_size=x_train.shape[1],

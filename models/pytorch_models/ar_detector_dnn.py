@@ -349,7 +349,10 @@ class ARDetectorDNN(BaseARDetector):
                 es = EarlyStopping(metric='loss',
                                    mode='min',
                                    patience=10,
-                                   checkpoint_file=os.path.join(self._results_directory, 'checkpoints', self._model_name + '_checkpoint.pt'))
+                                   checkpoint_file=os.path.join(self._results_directory,
+                                                                'checkpoints',
+                                                                self._model_name + '_checkpoint.pt'),
+                                   required_min_iteration=15)
 
                 for epoch in range(200):
                     model.train()
@@ -396,7 +399,7 @@ class ARDetectorDNN(BaseARDetector):
                                self._model_name + '_' + self._antibiotic_name + '.json'), 'w') as fp:
             json.dump(cv_results, fp)
 
-        best_hyperparameters = choose_best_hyperparameters(cv_results, metric='f1')
+        best_hyperparameters = choose_best_hyperparameters(cv_results, metric=self._scoring)
 
         if not os.path.exists(os.path.join(self._results_directory, 'best_models', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'best_models', self._target_directory))
@@ -509,7 +512,8 @@ class ARDetectorDNN(BaseARDetector):
                            checkpoint_file=os.path.join(self._results_directory,
                                                         'best_models',
                                                         self._target_directory,
-                                                        self._model_name + '_' + self._antibiotic_name + '.pt'))
+                                                        self._model_name + '_' + self._antibiotic_name + '.pt'),
+                           required_min_iteration=15)
 
         for epoch in range(2000):
             model.train()
