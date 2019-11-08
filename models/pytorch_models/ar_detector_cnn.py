@@ -142,10 +142,10 @@ class ConvNet1D(torch.nn.Module):
                     setattr(self, 'pool%i' % i, self.poolings[i])
                 elif self.pooling_type == 'average':
                     if self.pooling_paddings[i] is None:
-                        self.poolings.append(torch.nn.AvgPool1d1d(self.pooling_kernels[i],
+                        self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
                                                                   stride=self.pooling_strides[i]))
                     else:
-                        self.poolings.append(torch.nn.AvgPool1d1d(self.pooling_kernels[i],
+                        self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
                                                                   stride=self.pooling_strides[i],
                                                                   padding=self.pooling_paddings[i]))
                     setattr(self, 'pool%i' % i, self.poolings[i])
@@ -228,6 +228,7 @@ class ConvNet1D(torch.nn.Module):
 
     def _calculate_input_size_for_fc(self):
         # convolutional layers
+        output_width = 0
         for i in range(len(self.kernels)):
             if i == 0:
                 if self.conv_paddings[i] is None:
