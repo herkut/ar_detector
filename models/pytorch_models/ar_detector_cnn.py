@@ -143,11 +143,11 @@ class ConvNet1D(torch.nn.Module):
                 elif self.pooling_type == 'average':
                     if self.pooling_paddings[i] is None:
                         self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
-                                                                  stride=self.pooling_strides[i]))
+                                                                stride=self.pooling_strides[i]))
                     else:
                         self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
-                                                                  stride=self.pooling_strides[i],
-                                                                  padding=self.pooling_paddings[i]))
+                                                                stride=self.pooling_strides[i],
+                                                                padding=self.pooling_paddings[i]))
                     setattr(self, 'pool%i' % i, self.poolings[i])
                 #TODO raise unknown pooling method
             else:
@@ -242,7 +242,7 @@ class ConvNet1D(torch.nn.Module):
                     output_width = (output_width - self.kernels[i] + 2 * self.conv_paddings[i]) / self.strides[i] + 1
             # pooling
             if self.poolings[i] is not None:
-                output_width = (output_width - self.poolings[i].kernel_size + 2 * self.poolings[i].padding) / self.poolings[i].stride + 1
+                output_width = (output_width - (self.poolings[i].kernel_size if isinstance(self.poolings[i].kernel_size, int) else self.poolings[i].kernel_size[0]) + 2 * (self.poolings[i].padding if isinstance(self.poolings[i].padding, int) else self.poolings[i].padding[0])) / (self.poolings[i].stride if isinstance(self.poolings[i].stride, int) else self.poolings[i].stride[0]) + 1
 
         return output_width * self.channels[-1]
 
@@ -417,7 +417,7 @@ class ARDetectorCNN(BaseARDetector):
         return validation_results
 
     def _train_model(self, model, criterion, optimizer, es, tr_dataloader, val_dataloader):
-        for epoch in range(200):
+        for epoch in range(1):
             # Training
             tr_results = self._training_step(model, criterion, optimizer, tr_dataloader)
             print(str(epoch) + ': tr loss ' + str(tr_results['loss']))
@@ -441,7 +441,7 @@ class ARDetectorCNN(BaseARDetector):
             cv_results['grids'].append(grid)
             cv_result = {'training_results': [], 'validation_results': []}
 
-            cv = get_k_fold(10)
+            cv = get_k_fold(5)
 
             for tr_index, val_index in cv.split(idx, labels):
                 # Training dataset
@@ -470,7 +470,7 @@ class ARDetectorCNN(BaseARDetector):
                                    checkpoint_file=os.path.join(self._results_directory,
                                                                 'checkpoints',
                                                                 self._model_name + '_checkpoint.pt'),
-                                   required_min_iteration=15)
+                                   required_min_iteration=30)
 
                 self._train_model(model, criterion, optimizer, es, tr_dataloader, val_dataloader)
                 # Training has been completed
@@ -540,7 +540,7 @@ class ARDetectorCNN(BaseARDetector):
                                                         'best_models',
                                                         self._target_directory,
                                                         self._model_name + '_' + self._antibiotic_name + '.pt'),
-                           required_min_iteration=15)
+                           required_min_iteration=30)
 
         self._train_model(model, criterion, optimizer, es, dataloader_tr, dataloader_te)
 
