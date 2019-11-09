@@ -441,7 +441,7 @@ class ARDetectorCNN(BaseARDetector):
             cv_results['grids'].append(grid)
             cv_result = {'training_results': [], 'validation_results': []}
 
-            cv = get_k_fold(5)
+            cv = get_k_fold(10)
 
             for tr_index, val_index in cv.split(idx, labels):
                 # Training dataset
