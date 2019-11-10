@@ -417,7 +417,7 @@ class ARDetectorCNN(BaseARDetector):
         return validation_results
 
     def _train_model(self, model, criterion, optimizer, es, tr_dataloader, val_dataloader):
-        for epoch in range(1):
+        for epoch in range(200):
             # Training
             tr_results = self._training_step(model, criterion, optimizer, tr_dataloader)
             print(str(epoch) + ': tr loss ' + str(tr_results['loss']))
