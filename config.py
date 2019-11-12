@@ -39,3 +39,7 @@ class Config:
         cls.deep_learning_metric = raw['deep_learning_metric']
 
         cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide']
+
+    @classmethod
+    def set_target_drugs(cls, target_drugs):
+        cls.target_drugs = target_drugs

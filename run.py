@@ -46,9 +46,9 @@ def main():
         run.py tune_hyperparameters <configuration_file> <models> [--data_representation=<data_representation>]
         run.py train_best_models <configuration_file> <models> [--data_representation=<data_representation>]
         run.py test_best_models <configuration_file> <models> [--data_representation=<data_representation>]
-        run.py cnn_tune_hyperparameters <configuration_file> <models>
-        run.py cnn_train_best_models <configuration_file> <models>
-        run.py cnn_test_best_models <configuration_file> <models>
+        run.py cnn_tune_hyperparameters <configuration_file> <models> [--target_drugs=<target_drugs>]
+        run.py cnn_train_best_models <configuration_file> <models> [--target_drugs=<target_drugs>]
+        run.py cnn_test_best_models <configuration_file> <models> [--target_drugs=<target_drugs>]
         run.py execute_experiments <configuration_file> <models> [--data_representation=<data_representation>]
         run.py select_best_model <configuration_file> <directory_containing_results>
         
@@ -120,21 +120,33 @@ def main():
 
     elif args['cnn_tune_hyperparameters']:
         models = args['<models>']
-        # TODO use cnn model manager
+        if args['--target_drugs']:
+            td_str = args['--target_drugs']
+            target_drugs = td_str.split(',')
+            Config.set_target_drugs(target_drugs)
+
         cnn_model_manager = CNNModelManager(models, dataset)
 
         cnn_model_manager.tune_train_and_test_models()
 
     elif args['cnn_train_best_models']:
         models = args['<models>']
-        # TODO use cnn model manager
+        if args['--target_drugs']:
+            td_str = args['--target_drugs']
+            target_drugs = td_str.split(',')
+            Config.set_target_drugs(target_drugs)
+
         cnn_model_manager = CNNModelManager(models, dataset)
 
         cnn_model_manager.train_and_test_best_models()
 
     elif args['cnn_test_best_models']:
         models = args['<models>']
-        # TODO use cnn model manager
+        if args['--target_drugs']:
+            td_str = args['--target_drugs']
+            target_drugs = td_str.split(',')
+            Config.set_target_drugs(target_drugs)
+
         cnn_model_manager = CNNModelManager(models, dataset)
 
         cnn_model_manager.test_best_models()
