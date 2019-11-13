@@ -9,9 +9,9 @@ class DataRepresentationPreparer:
         tf = feature_matrix.divide((1 + np.sum(feature_matrix, axis=1)), axis=0)
 
         # Compute inverse document frequencies
-        idf = np.log2(len(tf) / feature_matrix[feature_matrix > 0].count())
+        idf = np.log2(len(tf) / (1 + feature_matrix[feature_matrix > 0].count()))
 
-        tfidf = np.multiply(tf, idf.to_frame().T)
+        tfidf = tf.mul(idf, axis=1)
 
         return tfidf
 
@@ -43,9 +43,9 @@ class DataRepresentationPreparer:
         bm25tf = ((k + 1) * tf).divide(k + tf)
 
         # Compute inverse document frequencies
-        idf = np.log2(len(tf) / feature_matrix[feature_matrix > 0].count())
+        idf = np.log2(len(tf) / (1 + feature_matrix[feature_matrix > 0].count()))
 
-        bm25tfidf = np.multiply(bm25tf, idf.to_frame().T)
+        bm25tfidf = bm25tf.mul(idf, axis=1)
 
         return bm25tfidf
 
