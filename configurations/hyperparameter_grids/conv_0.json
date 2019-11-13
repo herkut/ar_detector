@@ -1,0 +1,15 @@
+{
+  "batch_normalization": ["True"],
+  "batch_sizes": [256, 64],
+  "optimizers": ["Adam"],
+  "learning_rates": [0.01, 0.001],
+  "conv_kernels": [[7, 9, 11], [9, 11, 13]],
+  "conv_channels": [[128, 128, 128]],
+  "conv_strides": [[1,1, 1]],
+  "conv_paddings": [[null, null, null], [3, 4, 5]],
+  "conv_activation_functions": [["relu", "relu", "relu"]],
+  "pooling_types": ["max", "average"],
+  "fc_hidden_units": [[512, 512], [256, 256]],
+  "fc_activation_functions": [["relu", "relu"]],
+  "fc_dropout_rates": [0, 0.25, 0.5]
+}
