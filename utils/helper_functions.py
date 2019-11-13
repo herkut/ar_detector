@@ -49,7 +49,7 @@ def get_k_fold(k):
     return skf
 
 
-def create_hyperparameter_space_for_cnn(param_grid):
+def create_hyperparameter_space_for_cnn(param_grid, model_name='cnn'):
     """
     conv_kernels,
     conv_channels,
@@ -64,38 +64,66 @@ def create_hyperparameter_space_for_cnn(param_grid):
     pooling_type=None
     """
     hyperparameter_space = []
-    for bs in param_grid['batch_sizes']:
-        for optimizer_param in param_grid['optimizers']:
-            for lr in param_grid['learning_rates']:
-                for conv_kernels in param_grid['conv_kernels']:
-                    for conv_channels in param_grid['conv_channels']:
-                        for conv_strides in param_grid['conv_strides']:
-                            for conv_afs in param_grid['conv_activation_functions']:
-                                for conv_paddings in param_grid['conv_paddings']:
-                                    for pooling_kernels in param_grid['pooling_kernels']:
-                                        for pooling_strides in param_grid['pooling_strides']:
-                                            for pooling_paddings in param_grid['pooling_paddings']:
-                                                for fc_hus in param_grid['fc_hidden_units']:
-                                                    for fc_afs in param_grid['fc_activation_functions']:
-                                                        for fc_do in param_grid['fc_dropout_rates']:
-                                                            for pooling_type in param_grid['pooling_types']:
-                                                                grid = {}
-                                                                grid['batch_size'] = bs
-                                                                grid['optimizer'] = optimizer_param
-                                                                grid['learning_rate'] = lr
-                                                                grid['conv_kernels'] = conv_kernels
-                                                                grid['conv_channels'] = conv_channels
-                                                                grid['conv_strides'] = conv_strides
-                                                                grid['conv_paddings'] = conv_paddings
-                                                                grid['conv_activation_functions'] = conv_afs
-                                                                grid['pooling_kernels'] = pooling_kernels
-                                                                grid['pooling_strides'] = pooling_strides
-                                                                grid['pooling_paddings'] = pooling_paddings
-                                                                grid['fc_hidden_units'] = fc_hus
-                                                                grid['fc_activation_functions'] = fc_afs
-                                                                grid['fc_dropout_rate'] = fc_do
-                                                                grid['pooling_type'] = pooling_type
-                                                                hyperparameter_space.append(grid)
+    if model_name == 'conv_0':
+        for bs in param_grid['batch_sizes']:
+            for optimizer_param in param_grid['optimizers']:
+                for lr in param_grid['learning_rates']:
+                    for conv_kernels in param_grid['conv_kernels']:
+                        for conv_channels in param_grid['conv_channels']:
+                            for conv_strides in param_grid['conv_strides']:
+                                for conv_afs in param_grid['conv_activation_functions']:
+                                    for conv_paddings in param_grid['conv_paddings']:
+                                        for fc_hus in param_grid['fc_hidden_units']:
+                                            for fc_afs in param_grid['fc_activation_functions']:
+                                                for fc_do in param_grid['fc_dropout_rates']:
+                                                    for pooling_type in param_grid['pooling_types']:
+                                                        grid = {}
+                                                        grid['batch_size'] = bs
+                                                        grid['optimizer'] = optimizer_param
+                                                        grid['learning_rate'] = lr
+                                                        grid['conv_kernels'] = conv_kernels
+                                                        grid['conv_channels'] = conv_channels
+                                                        grid['conv_strides'] = conv_strides
+                                                        grid['conv_paddings'] = conv_paddings
+                                                        grid['conv_activation_functions'] = conv_afs
+                                                        grid['fc_hidden_units'] = fc_hus
+                                                        grid['fc_activation_functions'] = fc_afs
+                                                        grid['fc_dropout_rate'] = fc_do
+                                                        grid['pooling_type'] = pooling_type
+                                                        hyperparameter_space.append(grid)
+    else:
+        for bs in param_grid['batch_sizes']:
+            for optimizer_param in param_grid['optimizers']:
+                for lr in param_grid['learning_rates']:
+                    for conv_kernels in param_grid['conv_kernels']:
+                        for conv_channels in param_grid['conv_channels']:
+                            for conv_strides in param_grid['conv_strides']:
+                                for conv_afs in param_grid['conv_activation_functions']:
+                                    for conv_paddings in param_grid['conv_paddings']:
+                                        for pooling_kernels in param_grid['pooling_kernels']:
+                                            for pooling_strides in param_grid['pooling_strides']:
+                                                for pooling_paddings in param_grid['pooling_paddings']:
+                                                    for fc_hus in param_grid['fc_hidden_units']:
+                                                        for fc_afs in param_grid['fc_activation_functions']:
+                                                            for fc_do in param_grid['fc_dropout_rates']:
+                                                                for pooling_type in param_grid['pooling_types']:
+                                                                    grid = {}
+                                                                    grid['batch_size'] = bs
+                                                                    grid['optimizer'] = optimizer_param
+                                                                    grid['learning_rate'] = lr
+                                                                    grid['conv_kernels'] = conv_kernels
+                                                                    grid['conv_channels'] = conv_channels
+                                                                    grid['conv_strides'] = conv_strides
+                                                                    grid['conv_paddings'] = conv_paddings
+                                                                    grid['conv_activation_functions'] = conv_afs
+                                                                    grid['pooling_kernels'] = pooling_kernels
+                                                                    grid['pooling_strides'] = pooling_strides
+                                                                    grid['pooling_paddings'] = pooling_paddings
+                                                                    grid['fc_hidden_units'] = fc_hus
+                                                                    grid['fc_activation_functions'] = fc_afs
+                                                                    grid['fc_dropout_rate'] = fc_do
+                                                                    grid['pooling_type'] = pooling_type
+                                                                    hyperparameter_space.append(grid)
 
     return hyperparameter_space
 
@@ -121,7 +149,7 @@ def create_hyperparameter_space(param_grid):
     return hyperparameter_space
 
 
-def get_least_used_cuda_device():
+def get_least_used_cuda_device(gpu_count=1):
     """
     required nvidia-ml-py
     :return: cuda environment variable representing devices and the id of the least used cuda device
@@ -143,5 +171,12 @@ def get_least_used_cuda_device():
                                                                     meminfo.total / 1024. ** 2))
         gpu_used_mem.append(meminfo.used)
     nvmlShutdown()
-
-    return cuda_env_var, np.argmin(gpu_used_mem)
+    available_gpus = np.argsort(gpu_used_mem)[-gpu_count:]
+    cuda_env_var = ""
+    for i in available_gpus:
+        if cuda_env_var == "":
+            cuda_env_var = cuda_env_var + str(i)
+        else:
+            cuda_env_var = cuda_env_var + ',' + str(i)
+    print("CUDA ENV VAR: " + str(cuda_env_var))
+    return cuda_env_var, available_gpus
