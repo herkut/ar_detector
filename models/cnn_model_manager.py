@@ -66,13 +66,21 @@ class CNNModelManager:
         for i in range(len(Config.target_drugs)):
             for j in range(len(self.models)):
                 model_name = self.models[j]
-                ar_detector = ARDetectorCNN(Config.cnn_feature_size,
-                                            Config.cnn_first_in_channel,
-                                            Config.cnn_output_size,
-                                            antibiotic_name=Config.target_drugs[i],
-                                            model_name=model_name,
-                                            class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'])
-
+                if model_name == 'conv_0':
+                    ar_detector = ARDetectorCNN(Config.cnn_feature_size,
+                                                Config.cnn_first_in_channel,
+                                                Config.cnn_output_size,
+                                                antibiotic_name=Config.target_drugs[i],
+                                                model_name=model_name,
+                                                class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'],
+                                                gpu_count=2)
+                else:
+                    ar_detector = ARDetectorCNN(Config.cnn_feature_size,
+                                                Config.cnn_first_in_channel,
+                                                Config.cnn_output_size,
+                                                antibiotic_name=Config.target_drugs[i],
+                                                model_name=model_name,
+                                                class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'])
                 self.tune_hyperparameters_for_ar_detector(ar_detector,
                                                           Config.target_drugs[i])
 
@@ -87,11 +95,21 @@ class CNNModelManager:
         for i in range(len(Config.target_drugs)):
             for j in range(self.models):
                 model_name = self.models[j]
-                ar_detector = ARDetectorCNN(Config.cnn_feature_size,
-                                            Config.cnn_first_in_channel,
-                                            antibiotic_name=Config.target_drugs[i],
-                                            model_name=model_name,
-                                            class_weights=self.raw_data[Config.target_drugs[i]['class_weights']])
+                if model_name == 'conv_0':
+                    ar_detector = ARDetectorCNN(Config.cnn_feature_size,
+                                                Config.cnn_first_in_channel,
+                                                Config.cnn_output_size,
+                                                antibiotic_name=Config.target_drugs[i],
+                                                model_name=model_name,
+                                                class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'],
+                                                gpu_count=2)
+                else:
+                    ar_detector = ARDetectorCNN(Config.cnn_feature_size,
+                                                Config.cnn_first_in_channel,
+                                                Config.cnn_output_size,
+                                                antibiotic_name=Config.target_drugs[i],
+                                                model_name=model_name,
+                                                class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'])
                 self.train_best_model(ar_detector,
                                       Config.target_drugs[i])
                 self.test_ar_detector(ar_detector,
@@ -102,11 +120,21 @@ class CNNModelManager:
         for i in range(len(Config.target_drugs)):
             for j in range(self.models):
                 model_name = self.models[j]
-                ar_detector = ARDetectorCNN(Config.cnn_feature_size,
-                                            Config.cnn_first_in_channel,
-                                            antibiotic_name=Config.target_drugs[i],
-                                            model_name=model_name,
-                                            class_weights=self.raw_data[Config.target_drugs[i]['class_weights']])
+                if model_name == 'conv_0':
+                    ar_detector = ARDetectorCNN(Config.cnn_feature_size,
+                                                Config.cnn_first_in_channel,
+                                                Config.cnn_output_size,
+                                                antibiotic_name=Config.target_drugs[i],
+                                                model_name=model_name,
+                                                class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'],
+                                                gpu_count=2)
+                else:
+                    ar_detector = ARDetectorCNN(Config.cnn_feature_size,
+                                                Config.cnn_first_in_channel,
+                                                Config.cnn_output_size,
+                                                antibiotic_name=Config.target_drugs[i],
+                                                model_name=model_name,
+                                                class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'])
                 self.test_ar_detector(ar_detector,
                                       self.raw_data[Config.target_drugs[i]]['te_idx'],
                                       self.raw_data[Config.target_drugs[i]]['te_labels'])
