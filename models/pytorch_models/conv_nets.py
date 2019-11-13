@@ -150,11 +150,11 @@ class ConvNet0(torch.nn.Module):
         if self.conv_afs[0] == 'relu':
             c[0] = torch.nn.ReLU()(c[0])
         elif self.conv_afs[0] == 'tanh':
-            c[0] = torch.nn.ReLU()(c[0])
+            c[0] = torch.nn.Tanh()(c[0])
         elif self.conv_afs[0] == 'hardtanh':
-            c[0] = torch.nn.ReLU()(c[0])
+            c[0] = torch.nn.Hardtanh()(c[0])
         elif self.conv_afs[0] == 'leaky_relu':
-            c[0] = torch.nn.ReLU()(c[0])
+            c[0] = torch.nn.LeakyReLU()(c[0])
 
         if self.do_bn:
             c[0] = self.bns[0](c[0])
@@ -164,11 +164,11 @@ class ConvNet0(torch.nn.Module):
         if self.conv_afs[1] == 'relu':
             c[1] = torch.nn.ReLU()(c[1])
         elif self.conv_afs[1] == 'tanh':
-            c[1] = torch.nn.ReLU()(c[1])
+            c[1] = torch.nn.Tanh()(c[1])
         elif self.conv_afs[1] == 'hardtanh':
-            c[1] = torch.nn.ReLU()(c[1])
+            c[1] = torch.nn.Hardtanh()(c[1])
         elif self.conv_afs[1] == 'leaky_relu':
-            c[1] = torch.nn.ReLU()(c[1])
+            c[1] = torch.nn.LeakyReLU()(c[1])
 
         if self.do_bn:
             c[1] = self.bns[1](c[1])
@@ -180,21 +180,21 @@ class ConvNet0(torch.nn.Module):
         if self.conv_afs[2] == 'relu':
             c[2] = torch.nn.ReLU()(c[2])
         elif self.conv_afs[2] == 'tanh':
-            c[2] = torch.nn.ReLU()(c[2])
+            c[2] = torch.nn.Tanh()(c[2])
         elif self.conv_afs[2] == 'hardtanh':
-            c[2] = torch.nn.ReLU()(c[2])
+            c[2] = torch.nn.Hardtanh()(c[2])
         elif self.conv_afs[2] == 'leaky_relu':
-            c[2] = torch.nn.ReLU()(c[2])
+            c[2] = torch.nn.LeakyReLU()(c[2])
 
         if self.do_bn:
             c[2] = self.bns[2](c[2])
 
         x = c[0]
-        x = torch.cat(x, c[1])
+        x = torch.cat((x, c[1]), 0)
 
         x.to('cuda:'+str(self.devices[1]))
 
-        x = torch.cat(x, c[2])
+        x = torch.cat((x, c[2]), 0)
 
         if self.pooling_type == 'max':
             x = torch.max(x, 0)
