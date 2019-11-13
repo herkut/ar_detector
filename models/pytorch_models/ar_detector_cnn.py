@@ -470,7 +470,7 @@ class ARDetectorCNN(BaseARDetector):
                                    checkpoint_file=os.path.join(self._results_directory,
                                                                 'checkpoints',
                                                                 self._model_name + '_checkpoint.pt'),
-                                   required_min_iteration=30)
+                                   required_min_iteration=20)
 
                 self._train_model(model, criterion, optimizer, es, tr_dataloader, val_dataloader)
                 # Training has been completed
@@ -540,7 +540,7 @@ class ARDetectorCNN(BaseARDetector):
                                                         'best_models',
                                                         self._target_directory,
                                                         self._model_name + '_' + self._antibiotic_name + '.pt'),
-                           required_min_iteration=30)
+                           required_min_iteration=20)
 
         self._train_model(model, criterion, optimizer, es, dataloader_tr, dataloader_te)
 
