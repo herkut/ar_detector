@@ -4,7 +4,7 @@
   "optimizers": ["Adam"],
   "learning_rates": [0.01, 0.001],
   "conv_kernels": [[7, 9, 11], [9, 11, 13]],
-  "conv_channels": [[128, 128, 128]],
+  "conv_channels": [[100, 100, 100]],
   "conv_strides": [[1,1, 1]],
   "conv_paddings": [[null, null, null], [3, 4, 5]],
   "conv_activation_functions": [["relu", "relu", "relu"]],

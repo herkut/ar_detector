@@ -11,6 +11,9 @@ from utils.helper_functions import get_index_to_remove
 
 class CNNModelManager:
     def __init__(self, models, dataset):
+        # torch.backends.cudnn.benchmark = True
+        # torch.backends.cudnn.enabled = True
+
         self.dataset = dataset
         # Set which models would be trained
         self.models = models.split(',')
@@ -73,7 +76,7 @@ class CNNModelManager:
                                                 antibiotic_name=Config.target_drugs[i],
                                                 model_name=model_name,
                                                 class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'],
-                                                gpu_count=2)
+                                                gpu_count=4)
                 else:
                     ar_detector = ARDetectorCNN(Config.cnn_feature_size,
                                                 Config.cnn_first_in_channel,
@@ -102,7 +105,7 @@ class CNNModelManager:
                                                 antibiotic_name=Config.target_drugs[i],
                                                 model_name=model_name,
                                                 class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'],
-                                                gpu_count=2)
+                                                gpu_count=4)
                 else:
                     ar_detector = ARDetectorCNN(Config.cnn_feature_size,
                                                 Config.cnn_first_in_channel,
@@ -127,7 +130,7 @@ class CNNModelManager:
                                                 antibiotic_name=Config.target_drugs[i],
                                                 model_name=model_name,
                                                 class_weights=self.raw_data[Config.target_drugs[i]]['class_weights'],
-                                                gpu_count=2)
+                                                gpu_count=4)
                 else:
                     ar_detector = ARDetectorCNN(Config.cnn_feature_size,
                                                 Config.cnn_first_in_channel,

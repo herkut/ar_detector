@@ -52,6 +52,7 @@ class ConvNet0(torch.nn.Module):
         self.conv_bns = []
         self.conv_afs = conv_activation_functions
 
+        self.poolings = []
         self.pooling_type = pooling_type
 
         if fc_dropout_rate > 0:
@@ -68,49 +69,88 @@ class ConvNet0(torch.nn.Module):
         self.fc_afs = fc_activation_functions
 
         # Convolutional layers
-        for i in range(len(self.kernels)):
-            if i < 2:
-                if self.conv_paddings[i] is None:
-                    self.convs.append(torch.nn.Conv1d(self.first_in_channel,
-                                                      self.channels[i],
-                                                      self.kernels[i],
-                                                      stride=self.strides[i]).to('cuda:'+str(devices[0])))
-                else:
-                    self.convs.append(torch.nn.Conv1d(self.first_in_channel,
-                                                      self.channels[i],
-                                                      self.kernels[i],
-                                                      stride=self.strides[i],
-                                                      padding=conv_paddings[i]).to('cuda:'+str(devices[0])))
-                setattr(self, 'conv%i' % i, self.convs[i])
 
-                if self.do_bn:
-                    self.conv_bns.append(torch.nn.BatchNorm1d(self.channels[i]).to('cuda:'+str(devices[0])))
-                    setattr(self, 'conv_bn%i' % i, self.conv_bns[i])
+        # Conv0
+        if self.conv_paddings[0] is None:
+            self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                              self.channels[0],
+                                              self.kernels[0],
+                                              stride=self.strides[0]).to('cuda:' + str(devices[0])))
+        else:
+            self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                              self.channels[0],
+                                              self.kernels[0],
+                                              stride=self.strides[0],
+                                              padding=conv_paddings[0]).to('cuda:' + str(devices[0])))
+        setattr(self, 'conv%i' % 0, self.convs[0])
 
-                if self.conv_afs[i] not in ['relu', 'tanh', 'hardtanh', 'leaky_relu']:
-                    # TODO define custom not implemented activation function exception
-                    raise Exception('Not implemented activation function: ' + self.conv_afs[i])
-            else:
-                if self.conv_paddings[i] is None:
-                    self.convs.append(torch.nn.Conv1d(self.first_in_channel,
-                                                      self.channels[i],
-                                                      self.kernels[i],
-                                                      stride=self.strides[i]).to('cuda:'+str(devices[1])))
-                else:
-                    self.convs.append(torch.nn.Conv1d(self.first_in_channel,
-                                                      self.channels[i],
-                                                      self.kernels[i],
-                                                      stride=self.strides[i],
-                                                      padding=conv_paddings[i]).to('cuda:'+str(devices[1])))
-                setattr(self, 'conv%i' % i, self.convs[i])
+        if self.do_bn:
+            self.conv_bns.append(torch.nn.BatchNorm1d(self.channels[0]).to('cuda:' + str(devices[0])))
+            setattr(self, 'conv_bn%i' % 0, self.conv_bns[0])
 
-                if self.do_bn:
-                    self.conv_bns.append(torch.nn.BatchNorm1d(self.channels[i]).to('cuda:'+str(devices[1])))
-                    setattr(self, 'conv_bn%i' % i, self.conv_bns[i])
+        if self.conv_afs[0] not in ['relu', 'tanh', 'hardtanh', 'leaky_relu']:
+            # TODO define custom not implemented activation function exception
+            raise Exception('Not implemented activation function: ' + self.conv_afs[0])
 
-                if self.conv_afs[i] not in ['relu', 'tanh', 'hardtanh', 'leaky_relu']:
-                    # TODO define custom not implemented activation function exception
-                    raise Exception('Not implemented activation function: ' + self.conv_afs[i])
+        if self.conv_paddings[0] is None:
+            self.poolings.append(torch.nn.MaxPool1d(kernel_size=((((first_in_channel - conv_kernels[0]) / conv_strides[0]) + 1))))
+        else:
+            self.poolings.append(torch.nn.MaxPool1d(kernel_size=((((first_in_channel - conv_kernels[0] + 2 * conv_paddings[0]) / conv_strides[0]) + 1))))
+
+
+        # Conv1
+        if self.conv_paddings[1] is None:
+            self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                              self.channels[1],
+                                              self.kernels[1],
+                                              stride=self.strides[1]).to('cuda:' + str(devices[1])))
+        else:
+            self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                              self.channels[1],
+                                              self.kernels[1],
+                                              stride=self.strides[1],
+                                              padding=conv_paddings[1]).to('cuda:' + str(devices[1])))
+        setattr(self, 'conv%i' % 0, self.convs[1])
+
+        if self.do_bn:
+            self.conv_bns.append(torch.nn.BatchNorm1d(self.channels[1]).to('cuda:' + str(devices[1])))
+            setattr(self, 'conv_bn%i' % 0, self.conv_bns[1])
+
+        if self.conv_afs[1] not in ['relu', 'tanh', 'hardtanh', 'leaky_relu']:
+            # TODO define custom not implemented activation function exception
+            raise Exception('Not implemented activation function: ' + self.conv_afs[1])
+
+        if self.conv_paddings[1] is None:
+            self.poolings.append(torch.nn.MaxPool1d(kernel_size=((((first_in_channel - conv_kernels[1]) / conv_strides[1]) + 1))))
+        else:
+            self.poolings.append(torch.nn.MaxPool1d(kernel_size=((((first_in_channel - conv_kernels[1] + 2 * conv_paddings[1]) / conv_strides[1]) + 1))))
+
+        # Conv2
+        if self.conv_paddings[2] is None:
+            self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                              self.channels[2],
+                                              self.kernels[2],
+                                              stride=self.strides[2]).to('cuda:' + str(devices[2])))
+        else:
+            self.convs.append(torch.nn.Conv1d(self.first_in_channel,
+                                              self.channels[2],
+                                              self.kernels[2],
+                                              stride=self.strides[2],
+                                              padding=conv_paddings[2]).to('cuda:' + str(devices[2])))
+        setattr(self, 'conv%i' % 0, self.convs[2])
+
+        if self.do_bn:
+            self.conv_bns.append(torch.nn.BatchNorm1d(self.channels[2]).to('cuda:' + str(devices[2])))
+            setattr(self, 'conv_bn%i' % 0, self.conv_bns[2])
+
+        if self.conv_afs[2] not in ['relu', 'tanh', 'hardtanh', 'leaky_relu']:
+            # TODO define custom not implemented activation function exception
+            raise Exception('Not implemented activation function: ' + self.conv_afs[2])
+
+        if self.conv_paddings[2] is None:
+            self.poolings.append(torch.nn.MaxPool1d(kernel_size=((((first_in_channel - conv_kernels[2]) / conv_strides[2]) + 1))))
+        else:
+            self.poolings.append(torch.nn.MaxPool1d(kernel_size=((((first_in_channel - conv_kernels[2] + 2 * conv_paddings[2]) / conv_strides[2]) + 1))))
 
         # Max pooling or average pooling over time would be used just like in the reference paper
         input_size_for_fcs = np.sum(conv_channels)
@@ -119,34 +159,36 @@ class ConvNet0(torch.nn.Module):
         for i in range(len(self.fc_hus)):
             # fc
             if not self.fcs:
-                self.fcs.append(torch.nn.Linear(int(input_size_for_fcs), self.fc_hus[i]).to('cuda:'+str(devices[1])))
+                self.fcs.append(torch.nn.Linear(int(input_size_for_fcs), self.fc_hus[i]).to('cuda:'+str(devices[3])))
                 setattr(self, 'fc%i' % i, self.fcs[i])
             else:
-                self.fcs.append(torch.nn.Linear(self.fc_hus[i-1], self.fc_hus[i]).to('cuda:'+str(devices[1])))
+                self.fcs.append(torch.nn.Linear(self.fc_hus[i-1], self.fc_hus[i]).to('cuda:'+str(devices[3])))
                 setattr(self, 'fc%i' % i, self.fcs[i])
             # bn
             if self.do_bn:
-                self.fc_bns.append(torch.nn.BatchNorm1d(self.fc_hus[i]).to('cuda:'+str(devices[1])))
+                self.fc_bns.append(torch.nn.BatchNorm1d(self.fc_hus[i]).to('cuda:'+str(devices[3])))
                 setattr(self, 'fc_bn%i' % i, self.fc_bns[i])
             # do
             if self.do_dropout:
-                self.fc_dos.append(torch.nn.Dropout(p=fc_dropout_rate).to('cuda:'+str(devices[1])))
+                self.fc_dos.append(torch.nn.Dropout(p=fc_dropout_rate).to('cuda:'+str(devices[3])))
                 setattr(self, 'fc_do%i' % i, self.fc_dos[i])
 
             if self.fc_afs[i] not in ['relu', 'tanh', 'hardtanh', 'leaky_relu']:
                 # TODO define custom not implemented activation function exception
                 raise Exception('Not implemented activation function: ' + self.conv_afs[i])
 
-        self.predict = torch.nn.Linear(self.fc_hus[-1], self.output_size).to('cuda:'+str(devices[1]))
-        self.softmax = torch.nn.LogSoftmax(dim=1).to('cuda:'+str(devices[1]))
+        self.predict = torch.nn.Linear(self.fc_hus[-1], self.output_size).to('cuda:'+str(devices[3]))
+        self.softmax = torch.nn.LogSoftmax(dim=1).to('cuda:'+str(devices[3]))
 
     def forward(self, x):
-        x.to('cuda:'+str(self.devices[0]))
+        x0 = x.to('cuda:'+str(self.devices[0]), torch.float)
+        x1 = x.to('cuda:'+str(self.devices[1]), torch.float)
+        x2 = x.to('cuda:'+str(self.devices[2]), torch.float)
+
         # convs
         c = {}
-        
-        c[0] = self.convs[0](x)
-        # Set activations
+        # conv0
+        c[0] = self.convs[0](x0)
         if self.conv_afs[0] == 'relu':
             c[0] = torch.nn.ReLU()(c[0])
         elif self.conv_afs[0] == 'tanh':
@@ -157,10 +199,12 @@ class ConvNet0(torch.nn.Module):
             c[0] = torch.nn.LeakyReLU()(c[0])
 
         if self.do_bn:
-            c[0] = self.bns[0](c[0])
+            c[0] = self.conv_bns[0](c[0])
 
-        c[1] = self.convs[1](x)
-        # Set activations
+        c[0] = self.poolings[0](c[0])
+
+        # conv1
+        c[1] = self.convs[1](x1)
         if self.conv_afs[1] == 'relu':
             c[1] = torch.nn.ReLU()(c[1])
         elif self.conv_afs[1] == 'tanh':
@@ -171,12 +215,12 @@ class ConvNet0(torch.nn.Module):
             c[1] = torch.nn.LeakyReLU()(c[1])
 
         if self.do_bn:
-            c[1] = self.bns[1](c[1])
+            c[1] = self.conv_bns[1](c[1])
 
-        x.to('cuda:'+str(self.devices[1]))
+        c[1] = self.poolings[1](c[1])
 
-        c[2] = self.convs[2](x)
-        # Set activations
+        # conv2
+        c[2] = self.convs[2](x2)
         if self.conv_afs[2] == 'relu':
             c[2] = torch.nn.ReLU()(c[2])
         elif self.conv_afs[2] == 'tanh':
@@ -187,19 +231,17 @@ class ConvNet0(torch.nn.Module):
             c[2] = torch.nn.LeakyReLU()(c[2])
 
         if self.do_bn:
-            c[2] = self.bns[2](c[2])
+            c[2] = self.conv_bns[2](c[2])
 
-        x = c[0]
-        x = torch.cat((x, c[1]), 0)
+        c[2] = self.poolings[2](c[2])
 
-        x.to('cuda:'+str(self.devices[1]))
+        print(c[0].shape)
+        print(c[1].shape)
+        print(c[2].shape)
 
-        x = torch.cat((x, c[2]), 0)
-
-        if self.pooling_type == 'max':
-            x = torch.max(x, 0)
-        elif self.pooling_type == 'average':
-            x = torch.mean(x, 0)
+        x = torch.cat((c[0].to('cuda:' + str(self.devices[3])),
+                       c[1].to('cuda:' + str(self.devices[3])),
+                       c[2].to('cuda:' + str(self.devices[3]))), 1)
 
         # fc
         for i in range(len(self.fcs)):

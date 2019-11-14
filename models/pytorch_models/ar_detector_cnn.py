@@ -4,6 +4,7 @@ import os
 
 import torch
 from sklearn.metrics import confusion_matrix
+from pynvml import *
 
 from config import Config
 from models.base_ar_detector import BaseARDetector
@@ -35,12 +36,12 @@ class ARDetectorCNN(BaseARDetector):
             # instead of setting visible devices to least used cuda device
             # set visible devices with all cuda devices and use the least used one
             if self._model_name == 'conv_0':
-                cuda_env_var, least_used_gpus = get_least_used_cuda_device(gpu_count=2)
+                cuda_env_var, least_used_gpus = get_least_used_cuda_device(gpu_count=gpu_count)
                 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_env_var
             else:
                 cuda_env_var, least_used_gpus = get_least_used_cuda_device(gpu_count=1)
                 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_env_var
-            self._devices = least_used_gpus
+            self._devices = least_used_gpus[::-1]
         else:
             self._devices = "cpu"
 
@@ -90,7 +91,7 @@ class ARDetectorCNN(BaseARDetector):
                              pooling_type=hyperparameters['pooling_type'])
             if class_weights is not None:
                 criterion = torch.nn.NLLLoss(reduction='mean',
-                                             weight=torch.from_numpy(class_weights).to('cuda:'+str(devices[1])))
+                                             weight=torch.from_numpy(class_weights).to('cuda:'+str(devices[3])))
             else:
                 criterion = torch.nn.NLLLoss(reduction='mean')
         else:
@@ -162,6 +163,7 @@ class ARDetectorCNN(BaseARDetector):
         training_results = None
         for i, data in enumerate(dataloader):
             inputs, labels = data
+            labels = labels.to('cuda:' + str(self._devices[-1]))
 
             # initialization of gradients
             optimizer.zero_grad()
@@ -170,6 +172,7 @@ class ARDetectorCNN(BaseARDetector):
             pred = torch.argmax(y_hat, dim=1)
             # Computation of cost function
             cost = criterion(y_hat, labels)
+
             # Back propagation
             cost.backward()
             # Update parameters
@@ -193,6 +196,7 @@ class ARDetectorCNN(BaseARDetector):
         with torch.no_grad():
             for i, data in enumerate(dataloader):
                 inputs, labels = data
+                labels = labels.to('cuda:' + str(self._devices[-1]))
 
                 # Forward propagation
                 y_hat = model(inputs)
