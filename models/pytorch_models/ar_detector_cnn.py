@@ -172,7 +172,6 @@ class ARDetectorCNN(BaseARDetector):
             pred = torch.argmax(y_hat, dim=1)
             # Computation of cost function
             cost = criterion(y_hat, labels)
-
             # Back propagation
             cost.backward()
             # Update parameters
