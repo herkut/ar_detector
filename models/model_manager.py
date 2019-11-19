@@ -8,6 +8,7 @@ from models.logistic_regression import ARDetectorByLogisticRegression
 from models.pytorch_models.ar_detector_dnn import ARDetectorDNN
 from models.random_forest import ARDetectorByRandomForest
 from models.svm import ARDetectorBySVMWithRBF, ARDetectorBySVMWithLinear
+from models.xgboost import ARDetectorByXGBoost
 from preprocess.data_representation_preparer import DataRepresentationPreparer
 
 
@@ -99,6 +100,12 @@ class ModelManager:
                                                                  Config.target_drugs[i],
                                                                  class_weights=class_weights)
 
+                elif model == 'xgboost':
+                    ar_detector = ARDetectorByXGBoost(feature_selection,
+                                                      self.dataset,
+                                                      Config.target_drugs[i],
+                                                      class_weights=class_weights)
+
                 elif model in self.dnn_models:
                     # convert class weight into numpy matrix
                     class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
@@ -188,6 +195,12 @@ class ModelManager:
                                                                  Config.target_drugs[i],
                                                                  class_weights=class_weights)
 
+                elif model == 'xgboost':
+                    ar_detector = ARDetectorByXGBoost(feature_selection,
+                                                      self.dataset,
+                                                      Config.target_drugs[i],
+                                                      class_weights=class_weights)
+
                 elif model in self.dnn_models:
                     # convert class weight into numpy matrix
                     class_weights_numpy = np.array(list(class_weights.items()), dtype=np.float32)
@@ -272,6 +285,12 @@ class ModelManager:
                     ar_detector = ARDetectorByLogisticRegression(feature_selection,
                                                                  Config.target_drugs[i],
                                                                  class_weights=class_weights)
+
+                elif model == 'xgboost':
+                    ar_detector = ARDetectorByXGBoost(feature_selection,
+                                                      self.dataset,
+                                                      Config.target_drugs[i],
+                                                      class_weights=class_weights)
 
                 elif model in self.dnn_models:
                     # convert class weight into numpy matrix
