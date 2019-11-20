@@ -144,7 +144,12 @@ class ARDetectorByRandomForest(BaseARDetector):
 
         cv = get_k_fold(10)
 
-        grid = GridSearchCV(estimator=model, param_grid=param_grid, scoring=self._scoring, cv=cv, verbose=True, n_jobs=Config.scikit_learn_n_jobs)
+        grid = GridSearchCV(estimator=model,
+                            param_grid=param_grid,
+                            scoring=self._scoring,
+                            cv=cv,
+                            verbose=True,
+                            n_jobs=Config.scikit_learn_n_jobs)
         grid.fit(x_tr, y_tr)
 
         print(grid)
@@ -152,7 +157,10 @@ class ARDetectorByRandomForest(BaseARDetector):
         if not os.path.exists(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory)):
             os.makedirs(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory))
 
-        with open(os.path.join(self._results_directory, 'grid_search_scores', self._target_directory, 'random_forest_' + self._antibiotic_name + '.json'), 'w') as f:
+        with open(os.path.join(self._results_directory,
+                               'grid_search_scores',
+                               self._target_directory,
+                               'random_forest_' + self._antibiotic_name + '.json'), 'w') as f:
             f.write(json.dumps(grid.cv_results_, cls=NumpyEncoder))
 
         # summarize the results of the grid search
