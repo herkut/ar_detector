@@ -18,6 +18,7 @@ class Config:
     target_drugs = None
     scikit_learn_n_jobs = None
     deep_learning_metric = None
+    target_genes_directory = None
 
     @classmethod
     def initialize_configurations(cls, cfg):
@@ -37,6 +38,7 @@ class Config:
         cls.scikit_learn_n_jobs = raw['n_jobs']
         cls.hyperparameter_grids_directory = raw['hyperparameter_grids_directory']
         cls.deep_learning_metric = raw['deep_learning_metric']
+        cls.target_genes_directory = raw['target_genes_directory']
 
         cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide']
 
