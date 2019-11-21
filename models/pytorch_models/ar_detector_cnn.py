@@ -112,11 +112,11 @@ class ARDetectorCNN(BaseARDetector):
                               batch_normalization=True,
                               pooling_type=hyperparameters['pooling_type'])
             # TODO distribute model over multiple gpus for proposed architectures
-            model.to(devices[0])
+            model.to('cuda:' + str(devices[0]))
 
             if class_weights is not None:
                 criterion = torch.nn.NLLLoss(reduction='mean',
-                                             weight=torch.from_numpy(class_weights).to(devices[0]))
+                                             weight=torch.from_numpy(class_weights).to('cuda:' + str(devices[0])))
             else:
                 criterion = torch.nn.NLLLoss(reduction='mean')
 
