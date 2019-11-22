@@ -8,7 +8,7 @@ from preprocess.feature_label_preparer import FeatureLabelPreparer
 from run import get_labels_and_raw_feature_selections
 
 
-class RF:
+class RandomForestFeatureExtractor:
     def __init__(self, model_file, feature_name):
         """
 
@@ -44,8 +44,8 @@ if __name__ == '__main__':
         raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory, label_file))
         raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
 
-    rf = RF('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118/best_models/rf_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all/rf_Isoniazid.sav',
-            raw_feature_matrix.columns)
+    rf = RandomForestFeatureExtractor('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118/best_models/rf_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all/rf_Isoniazid.sav',
+                                      raw_feature_matrix.columns)
 
     important_features = rf.find_most_important_n_features(100)
 
