@@ -1,7 +1,7 @@
 import os
 
 from config import Config
-from postprocess.rf_feature_sorter import RF
+from postprocess.rf_feature_extractor import RandomForestFeatureExtractor
 from preprocess.feature_label_preparer import FeatureLabelPreparer
 from run import get_labels_and_raw_feature_selections
 
@@ -9,6 +9,30 @@ from run import get_labels_and_raw_feature_selections
 class PostProcessor:
     target_genes = ['ahpC', 'eis', 'embA', 'embB', 'embC', 'embR', 'fabG1', 'gidB', 'gyrA', 'gyrB', 'inhA', 'iniA',
                     'iniC', 'katG', 'manB', 'ndh', 'pncA', 'rmlD', 'rpoB', 'rpsA', 'rpsL', 'rrs', 'tlyA']
+
+    codon_to_aminoacid = {'ATG': 'START',
+                          'TAA': 'END', 'TGA': 'END', 'TAG': 'END',
+                          'GCT': 'A', 'GCC': 'A', 'GCC': 'A', 'GCG': 'A',
+                          'TTA': 'L', 'TTG': 'L', 'CTT': 'L', 'CTT': 'L', 'CTA': 'L', 'CTG': 'L',
+                          'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R', 'AGA': 'R', 'AGG': 'R',
+                          'AAA': 'K', 'AAG': 'K',
+                          'AAT': 'N', 'AAC': 'N',
+                          'ATG': 'M',
+                          'GAT': 'D', 'GAC': 'D',
+                          'TTT': 'F', 'TTC': 'F',
+                          'TGT': 'C', 'TGC': 'C',
+                          'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+                          'CAA': 'Q', 'CAG': 'Q',
+                          'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S', 'AGT': 'S', 'AGC': 'S',
+                          'GAA': 'E', 'GAG': 'E',
+                          'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+                          'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G',
+                          'TGG': 'W',
+                          'CAT': 'H', 'CAC': 'H',
+                          'TAT': 'Y', 'TAC': 'Y',
+                          'ATT': 'I', 'ATC': 'I', 'ATA': 'I',
+                          'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V'}
+
     target_antibiotic_genes = {'Isoniazid': ['ahpC',
                                              'fagB1',
                                              'inhA',
@@ -26,6 +50,16 @@ class PostProcessor:
                                'Pyrazinamide': ['pncA',
                                                 'rpsA']}
     target_genes_start_end_positions = None
+    gene_codons = None
+
+    def create_codons_for_all_genes(self):
+        PostProcessor.gene_codons = {}
+        for gene in PostProcessor.target_genes:
+            PostProcessor.gene_codons[gene] = self.create_codons_for_gene(gene)
+
+    def create_codons_for_gene(self, gene):
+        codons = []
+        return codons
 
     def load_start_and_end_positions_for_all_target_genes(self, additional_base_pair_upstream=100):
         if PostProcessor.target_genes_start_end_positions is None:
@@ -88,14 +122,18 @@ if __name__ == '__main__':
     results = {}
 
     for drug in Config.target_drugs:
-        rf = RF(os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
-                             'best_models',
-                             'rf_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all',
-                             'rf_' + drug + '.sav'),
-                raw_feature_matrix.columns)
-        most_importance_features = rf.find_most_important_n_features(100)
+        rf = RandomForestFeatureExtractor(os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
+                                                       'best_models',
+                                                       'rf_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all',
+                                                       'rf_' + drug + '.sav'),
+                                          raw_feature_matrix.columns)
+
+        most_importance_features = rf.find_most_important_n_features(50)
+        print('Found feature importance for: ' + drug)
         for mif in most_importance_features:
-            print(pp.find_mutated_gene_from_mutation_key(mif[0]))
+            print(pp.find_mutated_gene_from_mutation_key(mif[0]) + ' at ' + str(mif[0].split('_')[0]) +
+                  ' mutation ' + str(mif[0].split('_')[1]) + ' -> ' + str(mif[0].split('_')[2]) +
+                  ' with score ' + str(mif[1]))
 
     print(pp.find_mutated_gene_from_mutation_key('1917972_A_G'))
 
