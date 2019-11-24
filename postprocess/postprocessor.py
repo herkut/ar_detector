@@ -4,6 +4,7 @@ from config import Config
 from postprocess.rf_feature_extractor import RandomForestFeatureExtractor
 from preprocess.feature_label_preparer import FeatureLabelPreparer
 from run import get_labels_and_raw_feature_selections
+from Bio.Seq import Seq
 
 
 class PostProcessor:
@@ -57,8 +58,58 @@ class PostProcessor:
         for gene in PostProcessor.target_genes:
             PostProcessor.gene_codons[gene] = self.create_codons_for_gene(gene)
 
-    def create_codons_for_gene(self, gene):
+    def create_codons_for_gene(self, gene, additional_base_pair_upstream=100):
         codons = []
+        gene_3_to_5 = False
+        with open(os.path.join(Config.target_genes_directory, gene)) as f:
+            first_line = f.readline()
+            elements = first_line.split(' ')
+            tmp = elements[0].replace('>', '').split(':')[1]
+            tmp_arr = tmp.split('-')
+            if tmp_arr[0].startswith('c'):
+                gene_3_to_5 = True
+
+            gene_str = ''
+            while True:
+                line = f.readline().strip()
+                gene_str += line
+                if not line:
+                    break
+
+            if gene_3_to_5:
+                counter = 0
+                tmp_codon = ''
+                """
+                for nucleotide in reversed(gene_str):
+                    if counter > 2:
+                        counter = 0
+                        codons.append(tmp_codon)
+                        tmp_codon = nucleotide
+                    else:
+                        tmp_codon += nucleotide
+                    counter += 1
+                """
+                za = Seq(gene_str)
+                for nucleotide in za:
+                    if counter > 2:
+                        counter = 0
+                        codons.append(tmp_codon)
+                        tmp_codon = nucleotide
+                    else:
+                        tmp_codon += nucleotide
+                    counter += 1
+
+            else:
+                counter = 0
+                tmp_codon = ''
+                for nucleotide in gene_str:
+                    if counter > 2:
+                        counter = 0
+                        codons.append(tmp_codon)
+                        tmp_codon = nucleotide
+                    else:
+                        tmp_codon += nucleotide
+                    counter += 1
         return codons
 
     def load_start_and_end_positions_for_all_target_genes(self, additional_base_pair_upstream=100):
@@ -100,11 +151,24 @@ class PostProcessor:
 
     def __init__(self):
         self.load_start_and_end_positions_for_all_target_genes()
+        self.create_codons_for_all_genes()
 
 
 if __name__ == '__main__':
-    raw = open('/home/herkut/Desktop/ar_detector/configurations/conf.yml')
+    raw = open('/run/media/herkut/hdd-1/TB_genomes/ar_detector/configurations/conf.yml')
     Config.initialize_configurations(raw)
+
+    pp = PostProcessor()
+
+    print(pp.gene_codons['katG'][313] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['katG'][313]])
+    print(pp.gene_codons['katG'][314] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['katG'][314]])
+    print(pp.gene_codons['katG'][315] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['katG'][315]])
+    print(pp.gene_codons['katG'][316] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['katG'][316]])
+
+    print(pp.gene_codons['fabG1'][13] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['fabG1'][13]])
+    print(pp.gene_codons['fabG1'][14] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['fabG1'][14]])
+    print(pp.gene_codons['fabG1'][15] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['fabG1'][15]])
+    print(pp.gene_codons['fabG1'][16] + ' - ' + pp.codon_to_aminoacid[pp.gene_codons['fabG1'][16]])
 
     label_file, raw_feature_selections = get_labels_and_raw_feature_selections('dataset-ii')
 
@@ -116,8 +180,6 @@ if __name__ == '__main__':
         print("Feature importance would be extacted for: " + k)
         raw_label_matrix = FeatureLabelPreparer.get_labels_from_file(os.path.join(Config.dataset_directory, label_file))
         raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
-
-    pp = PostProcessor()
 
     results = {}
 
