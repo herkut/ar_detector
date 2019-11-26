@@ -7,6 +7,7 @@ from run import get_labels_and_raw_feature_selections
 from Bio.Seq import Seq
 from Bio import SeqIO
 import math
+import json
 
 
 class PostProcessor:
@@ -164,16 +165,19 @@ class PostProcessor:
                 mutation_type = 'snp'
             else:
                 mutation_type = 'indel'
-            if mutation_type == 'snp':
-                if pp.genes[mutated_gene]['gene_complement']:
-                    mutation_to = Seq(mutation_to).complement()
-                    location_on_gene = location - pp.target_genes_start_end_positions[mutated_gene]['start']
-                    location_on_gene = pp.target_genes_start_end_positions[mutated_gene]['end'] - \
-                                       pp.target_genes_start_end_positions[mutated_gene]['start'] - location_on_gene
-                else:
-                    location_on_gene = location - pp.target_genes_start_end_positions[mutated_gene]['start']
 
-                if location_on_gene >= 0:  # mutations on genes
+            if mutation_type == 'snp':
+                location_on_helix_1 = location_on_gene = location - pp.target_genes_start_end_positions[mutated_gene]['start']
+
+                if location_on_helix_1 >= 0:  # mutations on genes
+                    if pp.genes[mutated_gene]['gene_complement']:
+                        mutation_to = Seq(mutation_to).complement()
+                        gene_length = pp.target_genes_start_end_positions[mutated_gene]['end'] - \
+                                      pp.target_genes_start_end_positions[mutated_gene]['start']
+                        location_on_gene = gene_length - location_on_helix_1
+                    else:
+                        location_on_gene = location_on_helix_1
+
                     codon_number = int(location_on_gene / 3)
                     codon_location = location_on_gene % 3
                     codon_from = pp.genes[mutated_gene]['codons'][codon_number]
@@ -183,41 +187,18 @@ class PostProcessor:
                     mutation_name = mutated_gene + '_' + pp.codon_to_aminoacid[codon_from] + str(codon_number + 1) + \
                                     pp.codon_to_aminoacid[codon_to]
 
-                    print(mutation_name, str(mif[1]))
+                    # print(mutation_name, str(mif[1]))
                     important_mutations.append({'mutation': mutation_name, 'score': mif[1]})
                 else:  # mutations on gene promoters
-                    """
-                    codon_number = math.floor(location_on_gene / 3)
-                    codon_location = location_on_gene % 3
-                    if codon_location == 0:
-                        codon_st = location
-                        codon_end = location + 2
-                    elif codon_location == 1:
-                        codon_st = location - 1
-                        codon_end = location + 1
-                    elif codon_location == 2:
-                        codon_st = location - 2
-                        codon_end = location
-
-                    codon_from = pp.reference_genome[codon_st:codon_end+1]._data
-                    codon_to = codon_from
-                    codon_to = codon_to[:codon_location] + mutation_to + codon_to[codon_location+1:]
-
-                    if pp.genes[mutated_gene]['gene_complement']:
-                        codon_from = Seq(codon_from).reverse_complement()._seq
-                        codon_to = Seq(codon_to).reverse_complement()._seq
-
-                    mutation_name = mutated_gene + '_' + pp.codon_to_aminoacid[codon_from] + str(codon_number) + pp.codon_to_aminoacid[codon_to]
-                    print(mutation_name, str(mif[1]))
-                    """
                     if pp.genes[mutated_gene]['gene_complement']:
                         mutation_from = Seq(mutation_from).reverse_complement()._data
                         mutation_to = Seq(mutation_to).reverse_complement()._data
                     mutation_name = mutated_gene + '_' + mutation_from + str(location_on_gene) + mutation_to
-                    print(mutation_name, str(mif[1]))
+                    # print(mutation_name, str(mif[1]))
                     important_mutations.append({'mutation': mutation_name, 'score': mif[1]})
             else:
-                print('Mutation is an indel not a snp: ' + mutation_from + ' -> ' + mutation_to)
+                # print('Mutation is an indel not a snp: ' + mutation_from + ' -> ' + mutation_to)
+                pass
 
         return important_mutations
 
@@ -248,8 +229,11 @@ if __name__ == '__main__':
                                                        'rf_' + drug + '.sav'),
                                           raw_feature_matrix.columns)
 
-        most_importance_features = rf.find_most_important_n_features(50)
-        print('Found feature importance for: ' + drug)
+        most_importance_features = rf.find_most_important_n_features(20)
+        # print('Found feature importance for: ' + drug)
         important_mutations = pp.find_important_mutations(most_importance_features)
 
-    print('Zaa')
+        with open(os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
+                               'most_important_features',
+                               'rf_' + drug + '.json'), 'w') as file:
+            file.write(json.dumps(important_mutations))  # use `json.loads` to do the reverse
