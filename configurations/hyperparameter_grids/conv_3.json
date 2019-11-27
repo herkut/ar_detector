@@ -1,9 +1,9 @@
 {
   "batch_normalization": ["True"],
   "batch_sizes": [64, 32],
-  "optimizers": ["Adam", "RMSProp"],
+  "optimizers": ["Adam"],
   "learning_rates": [0.01, 0.001],
-  "conv_kernels": [[11]],
+  "conv_kernels": [[3], [5], [7], [9], [11]],
   "conv_channels": [[128]],
   "conv_strides": [[1]],
   "conv_paddings": [[null]],
@@ -11,7 +11,7 @@
   "pooling_kernels": [[37723]],
   "pooling_strides": [[1]],
   "pooling_paddings": [[null]],
-  "pooling_types": ["max", "average"],
+  "pooling_types": ["max"],
   "fc_hidden_units": [[32, 32], [16, 16]],
   "fc_activation_functions": [["relu", "relu"], ["leaky_relu", "leaky_relu"]],
   "fc_dropout_rates": [0, 0.25, 0.5]
