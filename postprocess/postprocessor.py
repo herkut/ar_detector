@@ -10,6 +10,11 @@ import math
 import json
 
 
+def save_most_important_features(features, file):
+    with open(file, 'w') as file:
+        file.write(json.dumps(features))  # use `json.loads` to do the reverse
+
+
 class PostProcessor:
     target_genes = ['ahpC', 'eis', 'embA', 'embB', 'embC', 'embR', 'fabG1', 'gidB', 'gyrA', 'gyrB', 'inhA', 'iniA',
                     'iniC', 'katG', 'manB', 'ndh', 'pncA', 'rmlD', 'rpoB', 'rpsA', 'rpsL', 'rrs', 'tlyA']
@@ -233,7 +238,6 @@ if __name__ == '__main__':
         # print('Found feature importance for: ' + drug)
         important_mutations = pp.find_important_mutations(most_importance_features)
 
-        with open(os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
-                               'most_important_features',
-                               'rf_' + drug + '.json'), 'w') as file:
-            file.write(json.dumps(important_mutations))  # use `json.loads` to do the reverse
+        save_most_important_features(important_mutations, os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
+                                                                        'most_important_features',
+                                                                        'rf_' + drug + '.json'))
