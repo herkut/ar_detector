@@ -43,9 +43,9 @@ def get_labels_and_raw_feature_selections(dataset):
 def main():
     args = docopt("""
     Usage: 
-        run.py tune_hyperparameters <configuration_file> <models> [--data_representation=<data_representation>]
-        run.py train_best_models <configuration_file> <models> [--data_representation=<data_representation>]
-        run.py test_best_models <configuration_file> <models> [--data_representation=<data_representation>]
+        run.py tune_hyperparameters <configuration_file> <models> [--data_representation=<data_representation>] [--target_drugs=<target_drugs>]
+        run.py train_best_models <configuration_file> <models> [--data_representation=<data_representation>] [--target_drugs=<target_drugs>]
+        run.py test_best_models <configuration_file> <models> [--data_representation=<data_representation>] [--target_drugs=<target_drugs>]
         run.py cnn_tune_hyperparameters <configuration_file> <models> [--target_drugs=<target_drugs>]
         run.py cnn_train_best_models <configuration_file> <models> [--target_drugs=<target_drugs>]
         run.py cnn_test_best_models <configuration_file> <models> [--target_drugs=<target_drugs>]
@@ -68,6 +68,11 @@ def main():
         data_representation = args['--data_representation']
 
     if args['tune_hyperparameters']:
+        if args['--target_drugs']:
+            td_str = args['--target_drugs']
+            target_drugs = td_str.split(',')
+            Config.set_target_drugs(target_drugs)
+
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
@@ -85,6 +90,11 @@ def main():
             model_manager.tune_train_and_test_models(k, raw_feature_matrix, raw_label_matrix)
 
     elif args['test_best_models']:
+        if args['--target_drugs']:
+            td_str = args['--target_drugs']
+            target_drugs = td_str.split(',')
+            Config.set_target_drugs(target_drugs)
+
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
@@ -102,6 +112,11 @@ def main():
             model_manager.test_best_models(k, raw_feature_matrix, raw_label_matrix)
 
     elif args['train_best_models']:
+        if args['--target_drugs']:
+            td_str = args['--target_drugs']
+            target_drugs = td_str.split(',')
+            Config.set_target_drugs(target_drugs)
+
         models = args['<models>']
         results_directory = args['<directory_containing_results>']
 
