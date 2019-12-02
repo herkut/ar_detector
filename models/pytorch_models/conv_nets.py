@@ -335,26 +335,47 @@ class ConvNet1D(torch.nn.Module):
                 # TODO define custom not implemented activation function exception
                 raise Exception('Not implemented activation function: ' + self.conv_afs[i])
             # Pooling layer it is applied to just after all conv layers
-            if self.pooling_type is not None and self.pooling_kernels[i] is not None and self.pooling_strides[
-                i] is not None:
-                if self.pooling_type == 'max':
-                    if self.pooling_paddings[i] is None:
-                        self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i],
-                                                                stride=self.pooling_strides[i]))
-                    else:
-                        self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i],
-                                                                stride=self.pooling_strides[i],
-                                                                padding=self.pooling_paddings[i]))
-                    setattr(self, 'pool%i' % i, self.poolings[i])
-                elif self.pooling_type == 'average':
-                    if self.pooling_paddings[i] is None:
-                        self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
-                                                                stride=self.pooling_strides[i]))
-                    else:
-                        self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
-                                                                stride=self.pooling_strides[i],
-                                                                padding=self.pooling_paddings[i]))
-                    setattr(self, 'pool%i' % i, self.poolings[i])
+            if self.pooling_type is not None and self.pooling_kernels[i] is not None and self.pooling_strides[i] is not None:
+                # if pooling is overtime
+                if self.pooling_kernels[i] == "overtime":
+                    if self.pooling_type == 'max':
+                        if self.pooling_paddings[i] is None:
+                            self.poolings.append(torch.nn.MaxPool1d(self._calculate_kernel_size_for_pooling_overtime_at(i),
+                                                                    stride=self.pooling_strides[i]))
+                        else:
+                            self.poolings.append(torch.nn.MaxPool1d(self._calculate_kernel_size_for_pooling_overtime_at(i),
+                                                                    stride=self.pooling_strides[i],
+                                                                    padding=self.pooling_paddings[i]))
+                        setattr(self, 'pool_over_time%i' % i, self.poolings[i])
+                    elif self.pooling_type == 'average':
+                        if self.pooling_paddings[i] is None:
+                            self.poolings.append(torch.nn.AvgPool1d(self._calculate_kernel_size_for_pooling_overtime_at(i),
+                                                                    stride=self.pooling_strides[i]))
+                        else:
+                            self.poolings.append(torch.nn.AvgPool1d(self._calculate_kernel_size_for_pooling_overtime_at(i),
+                                                                    stride=self.pooling_strides[i],
+                                                                    padding=self.pooling_paddings[i]))
+                        setattr(self, 'pool_over_time%i' % i, self.poolings[i])
+                else:
+                    if self.pooling_type == 'max':
+                        if self.pooling_paddings[i] is None:
+                            self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i],
+                                                                    stride=self.pooling_strides[i]))
+                        else:
+                            self.poolings.append(torch.nn.MaxPool1d(self.pooling_kernels[i],
+                                                                    stride=self.pooling_strides[i],
+                                                                    padding=self.pooling_paddings[i]))
+                        setattr(self, 'pool%i' % i, self.poolings[i])
+                    elif self.pooling_type == 'average':
+                        if self.pooling_paddings[i] is None:
+                            self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
+                                                                    stride=self.pooling_strides[i]))
+                        else:
+                            self.poolings.append(torch.nn.AvgPool1d(self.pooling_kernels[i],
+                                                                    stride=self.pooling_strides[i],
+                                                                    padding=self.pooling_paddings[i]))
+                        setattr(self, 'pool%i' % i, self.poolings[i])
+                # else
                 # TODO raise unknown pooling method
             else:
                 self.poolings.append(None)
@@ -450,6 +471,33 @@ class ConvNet1D(torch.nn.Module):
                     output_width = (output_width - self.kernels[i] + 2 * self.conv_paddings[i]) / self.strides[i] + 1
             # pooling
             if self.poolings[i] is not None:
+                output_width = (output_width -
+                                (self.poolings[i].kernel_size if isinstance(self.poolings[i].kernel_size, int) else
+                                    self.poolings[i].kernel_size[0])
+                                + 2 * (self.poolings[i].padding if isinstance(self.poolings[i].padding, int) else
+                                           self.poolings[i].padding[0])) \
+                               / (self.poolings[i].stride if isinstance(self.poolings[i].stride, int) else
+                                     self.poolings[i].stride[0]) \
+                               + 1
+
+        return int(output_width * self.channels[-1])
+
+    def _calculate_kernel_size_for_pooling_overtime_at(self, level):
+        output_width = 0
+        for i in range(level):
+            if i == 0:
+                if self.conv_paddings[i] is None:
+                    output_width = (self.feature_size - self.kernels[i] + 2 * 0) / self.strides[i] + 1
+                else:
+                    output_width = (self.feature_size - self.kernels[i] + 2 * self.conv_paddings[i]) / self.strides[
+                        i] + 1
+            else:
+                if self.conv_paddings[i] is None:
+                    output_width = (output_width - self.kernels[i] + 2 * 0) / self.strides[i] + 1
+                else:
+                    output_width = (output_width - self.kernels[i] + 2 * self.conv_paddings[i]) / self.strides[i] + 1
+            # pooling
+            if self.poolings[i] is not None:
                 output_width = (output_width - (
                     self.poolings[i].kernel_size if isinstance(self.poolings[i].kernel_size, int) else
                     self.poolings[i].kernel_size[0]) + 2 * (
@@ -458,4 +506,15 @@ class ConvNet1D(torch.nn.Module):
                                    self.poolings[i].stride if isinstance(self.poolings[i].stride, int) else
                                    self.poolings[i].stride[0]) + 1
 
-        return output_width * self.channels[-1]
+        if level == 0:
+            if self.conv_paddings[level] is None:
+                output_width = (self.feature_size - self.kernels[level] + 2 * 0) / self.strides[level] + 1
+            else:
+                output_width = (self.feature_size - self.kernels[level] + 2 * self.conv_paddings[level]) / self.strides[level] + 1
+        else:
+            if self.conv_paddings[level] is None:
+                output_width = (output_width - self.kernels[level] + 2 * 0) / self.strides[level] + 1
+            else:
+                output_width = (output_width - self.kernels[level] + 2 * self.conv_paddings[level]) / self.strides[level] + 1
+
+        return int(output_width)
