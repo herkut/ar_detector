@@ -35,16 +35,16 @@ class ARDetectorByXGBoost(BaseARDetector):
         self._antibiotic_name = antibiotic_name
 
     def reinitialize_model_with_parameters(self, parameters):
-        self._model = XGBClassifier(parameters['max_depth'],
-                                    parameters['n_estimators'],
-                                    parameters['learning_rate'],
+        self._model = XGBClassifier(max_depth=parameters['max_depth'],
+                                    n_estimators=parameters['n_estimators'],
+                                    learning_rate=parameters['learning_rate'],
                                     objective='binary:logistic',
                                     scale_pos_weight=self._class_weights[1])
 
     def reinitialize_best_model_with_parameters(self, parameters):
-        self._best_model = XGBClassifier(parameters['max_depth'],
-                                         parameters['n_estimators'],
-                                         parameters['learning_rate'],
+        self._best_model = XGBClassifier(max_depth=parameters['max_depth'],
+                                         n_estimators=parameters['n_estimators'],
+                                         learning_rate=parameters['learning_rate'],
                                          objective='binary:logistic',
                                          scale_pos_weight=self._class_weights[1])
 
