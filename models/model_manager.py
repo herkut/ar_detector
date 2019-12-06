@@ -79,31 +79,31 @@ class ModelManager:
                 if model == 'svm_rbf':
                     ar_detector = ARDetectorBySVMWithRBF(feature_selection,
                                                          self.dataset,
-                                                         Config.target_drugs[i],
+                                                         antibiotic_name=Config.target_drugs[i],
                                                          class_weights=class_weights)
 
                 elif model == 'svm_linear':
                     ar_detector = ARDetectorBySVMWithLinear(feature_selection,
                                                             self.dataset,
-                                                            Config.target_drugs[i],
+                                                            antibiotic_name=Config.target_drugs[i],
                                                             class_weights=class_weights)
 
                 elif model == 'rf':
                     ar_detector = ARDetectorByRandomForest(feature_selection,
                                                            self.dataset,
-                                                           Config.target_drugs[i],
+                                                           antibiotic_name=Config.target_drugs[i],
                                                            class_weights=class_weights)
 
                 elif model == 'lr':
                     ar_detector = ARDetectorByLogisticRegression(feature_selection,
                                                                  self.dataset,
-                                                                 Config.target_drugs[i],
+                                                                 antibiotic_name=Config.target_drugs[i],
                                                                  class_weights=class_weights)
 
                 elif model == 'xgboost':
                     ar_detector = ARDetectorByXGBoost(feature_selection,
                                                       self.dataset,
-                                                      Config.target_drugs[i],
+                                                      antibiotic_name=Config.target_drugs[i],
                                                       class_weights=class_weights)
 
                 elif model in self.dnn_models:
@@ -177,28 +177,32 @@ class ModelManager:
             for model in self.models:
                 if model == 'svm_rbf':
                     ar_detector = ARDetectorBySVMWithRBF(feature_selection,
-                                                         Config.target_drugs[i],
+                                                         self.dataset,
+                                                         antibiotic_name=Config.target_drugs[i],
                                                          class_weights=class_weights)
 
                 elif model == 'svm_linear':
                     ar_detector = ARDetectorBySVMWithLinear(feature_selection,
-                                                            Config.target_drugs[i],
+                                                            self.dataset,
+                                                            antibiotic_name=Config.target_drugs[i],
                                                             class_weights=class_weights)
 
                 elif model == 'rf':
                     ar_detector = ARDetectorByRandomForest(feature_selection,
-                                                           Config.target_drugs[i],
+                                                           self.dataset,
+                                                           antibiotic_name=Config.target_drugs[i],
                                                            class_weights=class_weights)
 
                 elif model == 'lr':
                     ar_detector = ARDetectorByLogisticRegression(feature_selection,
-                                                                 Config.target_drugs[i],
+                                                                 self.dataset,
+                                                                 antibiotic_name=Config.target_drugs[i],
                                                                  class_weights=class_weights)
 
                 elif model == 'xgboost':
                     ar_detector = ARDetectorByXGBoost(feature_selection,
                                                       self.dataset,
-                                                      Config.target_drugs[i],
+                                                      antibiotic_name=Config.target_drugs[i],
                                                       class_weights=class_weights)
 
                 elif model in self.dnn_models:
@@ -268,28 +272,32 @@ class ModelManager:
             for model in self.models:
                 if model == 'svm_rbf':
                     ar_detector = ARDetectorBySVMWithRBF(feature_selection,
-                                                         Config.target_drugs[i],
+                                                         self.dataset,
+                                                         antibiotic_name=Config.target_drugs[i],
                                                          class_weights=class_weights)
 
                 elif model == 'svm_linear':
                     ar_detector = ARDetectorBySVMWithLinear(feature_selection,
-                                                            Config.target_drugs[i],
+                                                            self.dataset,
+                                                            antibiotic_name=Config.target_drugs[i],
                                                             class_weights=class_weights)
 
                 elif model == 'rf':
                     ar_detector = ARDetectorByRandomForest(feature_selection,
-                                                           Config.target_drugs[i],
+                                                           self.dataset,
+                                                           antibiotic_name=Config.target_drugs[i],
                                                            class_weights=class_weights)
 
                 elif model == 'lr':
                     ar_detector = ARDetectorByLogisticRegression(feature_selection,
-                                                                 Config.target_drugs[i],
+                                                                 self.dataset,
+                                                                 antibiotic_name=Config.target_drugs[i],
                                                                  class_weights=class_weights)
 
                 elif model == 'xgboost':
                     ar_detector = ARDetectorByXGBoost(feature_selection,
                                                       self.dataset,
-                                                      Config.target_drugs[i],
+                                                      antibiotic_name=Config.target_drugs[i],
                                                       class_weights=class_weights)
 
                 elif model in self.dnn_models:
