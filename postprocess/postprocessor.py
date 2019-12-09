@@ -2,17 +2,34 @@ import os
 
 from config import Config
 from postprocess.rf_feature_extractor import RandomForestFeatureExtractor
+from postprocess.xgboost_feature_extractor import XGBoostFeatureExtractor
 from preprocess.feature_label_preparer import FeatureLabelPreparer
 from run import get_labels_and_raw_feature_selections
 from Bio.Seq import Seq
 from Bio import SeqIO
 import math
 import json
+import numpy as np
 
 
 def save_most_important_features(features, file):
     with open(file, 'w') as file:
-        file.write(json.dumps(features))  # use `json.loads` to do the reverse
+        file.write(json.dumps(features, cls=NumpyEncoder))  # use `json.loads` to do the reverse
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """ Special json encoder for numpy types """
+    def default(self, obj):
+        if isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
+            np.int16, np.int32, np.int64, np.uint8,
+            np.uint16, np.uint32, np.uint64)):
+            return int(obj)
+        elif isinstance(obj, (np.float_, np.float16, np.float32,
+            np.float64)):
+            return float(obj)
+        elif isinstance(obj,(np.ndarray,)): #### This is the fix
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 class PostProcessor:
@@ -154,7 +171,8 @@ class PostProcessor:
         return mutated_gene
 
     def __init__(self):
-        self.reference_genome = list(SeqIO.parse('/run/media/herkut/herkut/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
+        # self.reference_genome = list(SeqIO.parse('/run/media/herkut/herkut/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
+        self.reference_genome = list(SeqIO.parse('/run/media/herkut/hdd-1/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
         self.load_start_and_end_positions_for_all_target_genes()
         self.create_codons_for_all_genes()
 
@@ -166,10 +184,17 @@ class PostProcessor:
             location = int(mif[0].split('_')[0])
             mutation_from = mif[0].split('_')[1]
             mutation_to = mif[0].split('_')[2]
+
+            print(str(location) + ': ' + mutation_from + ' -> ' + mutation_to)
             if len(mutation_from) == 1 and len(mutation_to) == 1:
                 mutation_type = 'snp'
             else:
-                mutation_type = 'indel'
+                if len(mutation_from) > len(mutation_to):
+                    mutation_type = 'del'
+                elif len(mutation_from) < len(mutation_to):
+                    mutation_type = 'in'
+                else:
+                    mutation_type = 'mnv'
 
             if mutation_type == 'snp':
                 location_on_helix_1 = location_on_gene = location - pp.target_genes_start_end_positions[mutated_gene]['start']
@@ -201,16 +226,55 @@ class PostProcessor:
                     mutation_name = mutated_gene + '_' + mutation_from + str(location_on_gene) + mutation_to
                     # print(mutation_name, str(mif[1]))
                     important_mutations.append({'mutation': mutation_name, 'score': mif[1]})
+            elif mutation_type == 'in':
+                location_on_helix_1 = location_on_gene = location - pp.target_genes_start_end_positions[mutated_gene][
+                    'start']
+
+                if location_on_helix_1 >= 0:  # mutations on genes
+                    if pp.genes[mutated_gene]['gene_complement']:
+                        gene_length = pp.target_genes_start_end_positions[mutated_gene]['end'] - \
+                                      pp.target_genes_start_end_positions[mutated_gene]['start']
+                        location_on_gene = gene_length - location_on_helix_1
+                    else:
+                        location_on_gene = location_on_helix_1
+
+                if pp.genes[mutated_gene]['gene_complement']:
+                    mutation_from = Seq(mutation_from).reverse_complement()._data
+                    mutation_to = Seq(mutation_to).reverse_complement()._data
+                mutation_name = mutated_gene + '_' + str(location_on_gene) + '_in' + mutation_to[1:]
+                # print(mutation_name, str(mif[1]))
+                important_mutations.append({'mutation': mutation_name, 'score': mif[1]})
+            elif mutation_type == 'del':
+                if pp.genes[mutated_gene]['gene_complement']:
+                    gene_length = pp.target_genes_start_end_positions[mutated_gene]['end'] - \
+                                  pp.target_genes_start_end_positions[mutated_gene]['start']
+                    location_on_gene = gene_length - location_on_helix_1
+                else:
+                    location_on_gene = location_on_helix_1
+
+                if pp.genes[mutated_gene]['gene_complement']:
+                    mutation_from = Seq(mutation_from).reverse_complement()._data
+                    mutation_to = Seq(mutation_to).reverse_complement()._data
+                mutation_name = mutated_gene + '_' + str(location_on_gene) + '_ins' + mutation_from[1:]
+                # print(mutation_name, str(mif[1]))
+                important_mutations.append({'mutation': mutation_name, 'score': mif[1]})
             else:
-                # print('Mutation is an indel not a snp: ' + mutation_from + ' -> ' + mutation_to)
-                pass
+                print(mutation_from + ' -> ' + mutation_to)
 
         return important_mutations
 
 
 if __name__ == '__main__':
-    raw = open('/home/herkut/Desktop/ar_detector/configurations/conf.yml')
+    models = ['rf', 'xgboost']
+    feature_count = 25
+    # ar_detector_directory = '/home/herkut/Dekstop/ar_detector'
+    ar_detector_directory = '/run/media/herkut/hdd-1/TB_genomes/ar_detector'
+    raw = open(os.path.join(ar_detector_directory,
+                            'configurations/conf.yml'))
     Config.initialize_configurations(raw)
+
+    # main_directory = '/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191205'
+    main_directory = '/run/media/herkut/hdd-1/TB_genomes/truba/ar_detector_results_dataset-ii_20191205'
 
     pp = PostProcessor()
 
@@ -228,16 +292,36 @@ if __name__ == '__main__':
     results = {}
 
     for drug in Config.target_drugs:
-        rf = RandomForestFeatureExtractor(os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
-                                                       'best_models',
-                                                       'rf_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all',
-                                                       'rf_' + drug + '.sav'),
-                                          raw_feature_matrix.columns)
+        for model in models:
+            m = None
+            most_important_features = None
+            most_importance_features_names = None
+            most_important_features_scores = None
+            if model == 'rf':
+                m = RandomForestFeatureExtractor(os.path.join(main_directory,
+                                                               'best_models',
+                                                               model + '_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all',
+                                                               model + '_' + drug + '.sav'),
+                                                 raw_feature_matrix.columns)
+                most_important_features = m.find_most_important_n_features(feature_count)
+            elif model == 'xgboost':
+                m = XGBoostFeatureExtractor(os.path.join(main_directory,
+                                                         'best_models',
+                                                         model + '_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all',
+                                                         model + '_' + drug + '.sav'),
+                                            raw_feature_matrix.columns,
+                                            raw_feature_matrix)
+                most_importance_features_names, most_important_features_scores = m.find_most_important_n_features(feature_count)
+                most_important_features = []
+                for i in range(len(most_importance_features_names)):
+                    most_important_features.append([most_importance_features_names[i],
+                                                    most_important_features_scores[i]])
 
-        most_importance_features = rf.find_most_important_n_features(20)
-        # print('Found feature importance for: ' + drug)
-        important_mutations = pp.find_important_mutations(most_importance_features)
 
-        save_most_important_features(important_mutations, os.path.join('/home/herkut/Desktop/truba/ar_detector_results_dataset-ii_20191118',
-                                                                        'most_important_features',
-                                                                        'rf_' + drug + '.json'))
+
+            # print('Found feature importance for: ' + drug)
+            important_mutations = pp.find_important_mutations(most_important_features)
+
+            save_most_important_features(important_mutations, os.path.join(main_directory,
+                                                                           'most_important_features',
+                                                                           model + '_' + drug + '.json'))
