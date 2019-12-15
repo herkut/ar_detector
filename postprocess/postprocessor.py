@@ -1,6 +1,7 @@
 import os
 
 from config import Config
+from postprocess.lr_feature_extractor import LogisticRegressionFeatureExtractor
 from postprocess.rf_feature_extractor import RandomForestFeatureExtractor
 from postprocess.xgboost_feature_extractor import XGBoostFeatureExtractor
 from preprocess.feature_label_preparer import FeatureLabelPreparer
@@ -10,6 +11,7 @@ from Bio import SeqIO
 import math
 import json
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def save_most_important_features(features, file):
@@ -264,9 +266,36 @@ class PostProcessor:
         return important_mutations
 
 
+def draw_plots(results, model, count=10):
+    fig = plt.figure()
+
+    counter = 1
+    for drug in results:
+        ax = fig.add_subplot(2, 2, counter)
+        names = []
+        scores = []
+        tmp_counter = 0
+        for x in results[drug]:
+            if tmp_counter < count:
+                if len(x['mutation']) < 25:
+                    names.append(x['mutation'])
+                    scores.append(x['score'])
+                    tmp_counter = tmp_counter + 1
+        ax.barh(names, scores)
+        ax.set_xlabel('SHAP values')
+        ax.set_title('SHAP scores for ' + drug)
+        ax.invert_yaxis()
+        counter = counter + 1
+
+    plt.tight_layout()
+    plt.savefig('/home/herkut/Desktop/variants_shap_' + model + '.png')
+    plt.show()
+
+
 if __name__ == '__main__':
-    models = ['rf', 'xgboost']
-    feature_count = 25
+    # models = ['rf', 'xgboost']
+    models = ['xgboost', 'lr']
+    feature_count = 15
     # ar_detector_directory = '/home/herkut/Dekstop/ar_detector'
     ar_detector_directory = '/run/media/herkut/hdd-1/TB_genomes/ar_detector'
     raw = open(os.path.join(ar_detector_directory,
@@ -290,6 +319,9 @@ if __name__ == '__main__':
         raw_feature_matrix = FeatureLabelPreparer.get_feature_matrix_from_files(v)
 
     results = {}
+
+    xgboost_results = {}
+    lr_results = {}
 
     for drug in Config.target_drugs:
         for model in models:
@@ -316,12 +348,29 @@ if __name__ == '__main__':
                 for i in range(len(most_importance_features_names)):
                     most_important_features.append([most_importance_features_names[i],
                                                     most_important_features_scores[i]])
-
-
-
+            elif model == 'lr':
+                m = LogisticRegressionFeatureExtractor(os.path.join(main_directory,
+                                                                    'best_models',
+                                                                    model + '_accuracy_phenotype_binary_snp_09_bcf_nu_indel_00_platypus_all',
+                                                                    model + '_' + drug + '.sav'),
+                                                       raw_feature_matrix.columns,
+                                                       raw_feature_matrix)
+                _, _, most_importance_features_names, most_important_features_scores = m.find_most_important_n_features(feature_count)
+                most_important_features = []
+                for i in range(len(most_importance_features_names)):
+                    most_important_features.append([most_importance_features_names[i],
+                                                    most_important_features_scores[i]])
             # print('Found feature importance for: ' + drug)
             important_mutations = pp.find_important_mutations(most_important_features)
-
+            if model == 'xgboost':
+                xgboost_results[drug] = important_mutations
+            elif model == 'lr':
+                lr_results[drug] = important_mutations
+                
             save_most_important_features(important_mutations, os.path.join(main_directory,
                                                                            'most_important_features',
                                                                            model + '_' + drug + '.json'))
+    if not xgboost_results:
+        draw_plots(xgboost_results)
+    if not lr_results:
+        draw_plots(lr_results)
