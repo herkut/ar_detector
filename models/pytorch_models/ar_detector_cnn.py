@@ -24,7 +24,14 @@ import pandas as pd
 
 class ARDetectorCNN(BaseARDetector):
     # TODO convert multilabel classifier and use only samples which have label for all antibiotics
-    def __init__(self, feature_size, first_in_channel, output_size, antibiotic_name=None, model_name='cnn', class_weights=None, gpu_count=1):
+    def __init__(self,
+                 feature_size,
+                 first_in_channel,
+                 output_size,
+                 antibiotic_name=None,
+                 model_name='cnn',
+                 class_weights=None,
+                 gpu_count=1):
         self._results_directory = Config.results_directory
         self._dataset = Config.cnn_target_dataset
         self._results_directory = self._results_directory + '_' + self._dataset
@@ -41,6 +48,10 @@ class ARDetectorCNN(BaseARDetector):
             else:
                 cuda_env_var, least_used_gpus = get_least_used_cuda_device(gpu_count=1)
                 os.environ["CUDA_VISIBLE_DEVICES"] = cuda_env_var
+                # if there is only one valid gpu in cuda visible devices pytorch see gpu
+                # as 0 without minding its original id
+                least_used_gpus = [0]
+
             self._devices = least_used_gpus[::-1]
         else:
             self._devices = "cpu"
