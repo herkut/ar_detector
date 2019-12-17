@@ -23,11 +23,11 @@ class XGBoostFeatureExtractor:
         self.X = X
 
     def find_most_important_n_features(self, n, save_images=False, drug='tmp_drug'):
-        xgboost.plot_importance(self.model)
-        plt.title("xgboost.plot_importance(model)")
-        plt.show()
+        # xgboost.plot_importance(self.model)
+        # plt.title("xgboost.plot_importance(model)")
+        # plt.show()
 
-        shap.initjs()
+        # shap.initjs()
         explainer = shap.TreeExplainer(self.model)
         shap_values = explainer.shap_values(self.X)
 
@@ -38,12 +38,35 @@ class XGBoostFeatureExtractor:
         # shap.force_plot(explainer.expected_value, shap_values[0, :], self.X.iloc[0, :])
         # shap.force_plot(explainer.expected_value, shap_values[:50, :], self.X.iloc[:50, :])
 
-        #shap.summary_plot(shap_values, self.X, max_display=n, plot_type="dot")
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="dot")
         # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="compact_dot")
-        shap.summary_plot(shap_values, self.X, max_display=n, plot_type="bar")
-        #shap.summary_plot(shap_values, self.X, max_display=n, plot_type="violin")
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="bar")
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="violin")
 
         return self.X.columns[most_important_feature_indices], global_shap_values[most_important_feature_indices]
+
+    def choose_features_randomly(self, n):
+        # xgboost.plot_importance(self.model)
+        # plt.title("xgboost.plot_importance(model)")
+        # plt.show()
+
+        # shap.initjs()
+        explainer = shap.TreeExplainer(self.model)
+        shap_values = explainer.shap_values(self.X)
+
+        # feature_order = np.argsort(np.sum(np.abs(shap_values), axis=0))[::-n]
+        global_shap_values = np.abs(shap_values).mean(0)
+        feature_indices = np.random.choice(self.X.shape[1], n)
+
+        # shap.force_plot(explainer.expected_value, shap_values[0, :], self.X.iloc[0, :])
+        # shap.force_plot(explainer.expected_value, shap_values[:50, :], self.X.iloc[:50, :])
+
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="dot")
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="compact_dot")
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="bar")
+        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="violin")
+
+        return self.X.columns[feature_indices], global_shap_values[feature_indices]
 
 
 if __name__ == '__main__':

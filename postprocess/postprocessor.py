@@ -173,8 +173,8 @@ class PostProcessor:
         return mutated_gene
 
     def __init__(self):
-        # self.reference_genome = list(SeqIO.parse('/run/media/herkut/herkut/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
-        self.reference_genome = list(SeqIO.parse('/run/media/herkut/hdd-1/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
+        self.reference_genome = list(SeqIO.parse('/run/media/herkut/herkut/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
+        # self.reference_genome = list(SeqIO.parse('/run/media/herkut/hdd-1/TB_genomes/reference_genome/mtb_h37rv_v3.fasta', 'fasta'))[0]._seq
         self.load_start_and_end_positions_for_all_target_genes()
         self.create_codons_for_all_genes()
 
@@ -264,6 +264,88 @@ class PostProcessor:
                 print(mutation_from + ' -> ' + mutation_to)
 
         return important_mutations
+
+    def find_mutation_id(self, mif):
+        mutation_name = None
+        mutated_gene = self.find_mutated_gene_from_mutation_key(mif)
+        location = int(mif.split('_')[0])
+        mutation_from = mif.split('_')[1]
+        mutation_to = mif.split('_')[2]
+
+        print('Mutation on: ' + mutated_gene + ' ' + str(location) + ': ' + mutation_from + ' -> ' + mutation_to)
+        if len(mutation_from) == 1 and len(mutation_to) == 1:
+            mutation_type = 'snp'
+        else:
+            if len(mutation_from) > len(mutation_to):
+                mutation_type = 'del'
+            elif len(mutation_from) < len(mutation_to):
+                mutation_type = 'in'
+            else:
+                mutation_type = 'mnv'
+
+        if mutation_type == 'snp':
+            location_on_helix_1 = location_on_gene = location - self.target_genes_start_end_positions[mutated_gene][
+                'start']
+
+            if location_on_helix_1 >= 0:  # mutations on genes
+                if self.genes[mutated_gene]['gene_complement']:
+                    mutation_to = Seq(mutation_to).complement()
+                    gene_length = self.target_genes_start_end_positions[mutated_gene]['end'] - \
+                                  self.target_genes_start_end_positions[mutated_gene]['start']
+                    location_on_gene = gene_length - location_on_helix_1
+                else:
+                    location_on_gene = location_on_helix_1
+
+                codon_number = int(location_on_gene / 3)
+                codon_location = location_on_gene % 3
+                codon_from = self.genes[mutated_gene]['codons'][codon_number]
+                codon_to = codon_from
+                codon_to = codon_to[:codon_location] + mutation_to + codon_to[codon_location + 1:]
+
+                mutation_name = mutated_gene + '_' + self.codon_to_aminoacid[codon_from] + str(codon_number + 1) + \
+                                self.codon_to_aminoacid[codon_to]
+
+            else:  # mutations on gene promoters
+                if self.genes[mutated_gene]['gene_complement']:
+                    mutation_from = Seq(mutation_from).reverse_complement()._data
+                    mutation_to = Seq(mutation_to).reverse_complement()._data
+                mutation_name = mutated_gene + '_' + mutation_from + str(location_on_gene) + mutation_to
+        elif mutation_type == 'in':
+            location_on_helix_1 = location_on_gene = location - self.target_genes_start_end_positions[mutated_gene][
+                'start']
+
+            if location_on_helix_1 >= 0:  # mutations on genes
+                if self.genes[mutated_gene]['gene_complement']:
+                    gene_length = self.target_genes_start_end_positions[mutated_gene]['end'] - \
+                                  self.target_genes_start_end_positions[mutated_gene]['start']
+                    location_on_gene = gene_length - location_on_helix_1
+                else:
+                    location_on_gene = location_on_helix_1
+
+            if self.genes[mutated_gene]['gene_complement']:
+                mutation_from = Seq(mutation_from).reverse_complement()._data
+                mutation_to = Seq(mutation_to).reverse_complement()._data
+            mutation_name = mutated_gene + '_' + str(location_on_gene) + '_in' + mutation_to[1:]
+        elif mutation_type == 'del':
+            location_on_helix_1 = location_on_gene = location - self.target_genes_start_end_positions[mutated_gene][
+                'start']
+
+            if self.genes[mutated_gene]['gene_complement']:
+                gene_length = self.target_genes_start_end_positions[mutated_gene]['end'] - \
+                              self.target_genes_start_end_positions[mutated_gene]['start']
+                location_on_gene = gene_length - location_on_helix_1
+            else:
+                location_on_gene = location_on_helix_1
+
+            if self.genes[mutated_gene]['gene_complement']:
+                mutation_from = Seq(mutation_from).reverse_complement()._data
+                mutation_to = Seq(mutation_to).reverse_complement()._data
+            mutation_name = mutated_gene + '_' + str(location_on_gene) + '_ins' + mutation_from[1:]
+
+        else:
+            print(mutation_from + ' -> ' + mutation_to)
+
+        return mutation_name
 
 
 def draw_plots(results, model, count=10):
