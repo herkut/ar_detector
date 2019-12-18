@@ -75,16 +75,19 @@ class ProposedMutationSupporter:
         self.important_feature_count = important_feature_count
         self.enable_most_important_feature_statistics_estimator = enable_most_important_feature_statistics_estimator
         self.enable_random_feature_statistics_estimator = enable_random_feature_statistics_estimator
+        self.thresholds = [10, 20, 40, 60]
         self.raw_labels = None
         self.raw_features = None
         self.mutations_labels_joined = None
         self.read_feature_and_labels()
 
+        self.mutation_database = {}
         self.important_features = {}
         self.random_features = {}
 
         self.pp = PostProcessor()
 
+        self.initialize_mutation_database()
         self.find_most_important_features()
         self.choose_random_features()
 
@@ -131,6 +134,40 @@ class ProposedMutationSupporter:
                     writer = csv.DictWriter(csvfile, fieldnames=field_names)
                     writer.writeheader()
                     writer.writerows(all_statistics)
+        self.create_results()
+
+    def initialize_mutation_database(self):
+        for drug in Config.target_drugs:
+            with open(os.path.join(Config.mutation_database_directory,
+                                   'mutation_database_' + drug + '.csv'), 'r') as f:
+                content = f.readlines()
+            content = [x.strip() for x in content]
+            self.mutation_database[drug] = content
+
+    def create_results(self):
+        precisions = {}
+        for drug in Config.target_drugs:
+            print('For ' + drug)
+            for t in self.thresholds:
+                precisions[t] = self.calculate_precision(drug, t)
+                print(str(t) + ': ' + str(precisions[t]))
+
+    def calculate_precision(self, drug, threshold):
+        counter = 0
+        tp = 0
+        fp = 0
+        for i in range(len(self.important_features[drug][0])):
+            if counter < threshold:
+                if self.find_mutation_type(self.important_features[drug][0][i]) != 'mnv':
+                    # print(self.pp.find_mutation_id(self.important_features[drug][0][i]))
+                    if self.pp.find_mutation_id(self.important_features[drug][0][i]) in self.mutation_database[drug]:
+                        tp += 1
+                    else:
+                        fp += 1
+                    counter += 1
+            else:
+                break
+        return tp / (tp + fp)
 
     def find_mutation_type(self, mutation):
         mutation_arr = mutation.split('_')
@@ -186,8 +223,8 @@ class ProposedMutationSupporter:
 
 
 if __name__ == '__main__':
-    # ar_detector_directory = '/run/media/herkut/hdd-1/TB_genomes/ar_detector'
-    ar_detector_directory = '/home/herkut/Desktop/ar_detector'
+    ar_detector_directory = '/run/media/herkut/hdd-1/TB_genomes/ar_detector'
+    # ar_detector_directory = '/home/herkut/Desktop/ar_detector'
     raw = open(os.path.join(ar_detector_directory,
                             'configurations/conf.yml'))
     Config.initialize_configurations(raw)
@@ -195,11 +232,12 @@ if __name__ == '__main__':
     models_directory = '/run/media/herkut/herkut/TB_genomes/truba/ar_detector_results_dataset-ii_20191205'
     # models_directory = '/run/media/herkut/hdd-1/TB_genomes/truba/ar_detector_results_dataset-ii_20191205'
 
-    # convert_pandas_to_pickle()
-    """
-    pms = ProposedMutationSupporter(models_directory,
-                                    important_feature_count=50,
-                                    enable_most_important_feature_statistics_estimator=False)
-    """
+    # Create python database for dreamtb downloaded mutations
     for drug in Config.target_drugs:
         create_database_according_to_dreamtb(drug)
+
+    # convert_pandas_to_pickle()
+    pms = ProposedMutationSupporter(models_directory,
+                                    important_feature_count=150,
+                                    enable_most_important_feature_statistics_estimator=False,
+                                    enable_random_feature_statistics_estimator=False)

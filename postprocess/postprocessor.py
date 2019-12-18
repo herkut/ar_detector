@@ -136,7 +136,7 @@ class PostProcessor:
             else:
                 location = row[10]
                 nucleotide_from = row[11].split('/')[0].strip()
-                nucleotide_to = row[11].split('/')[0].strip()
+                nucleotide_to = row[11].split('/')[1].strip()
                 mutation_id = gene + '_' + nucleotide_from + str(location) + nucleotide_to
         elif int(row[10]) >= 0:
             if row[11].startswith('ins') or row[11].startswith('del'):
@@ -244,7 +244,7 @@ class PostProcessor:
 
         mutated_gene = None
         for gene in PostProcessor.target_genes_start_end_positions:
-            if PostProcessor.target_genes_start_end_positions[gene]['start']-additional_base_pair_upstream < mutation_location < PostProcessor.target_genes_start_end_positions[gene]['end']:
+            if PostProcessor.target_genes_start_end_positions[gene]['start']-additional_base_pair_upstream <= mutation_location <= PostProcessor.target_genes_start_end_positions[gene]['end']:
                 mutated_gene = gene
                 break
 
@@ -350,7 +350,7 @@ class PostProcessor:
         mutation_from = mif.split('_')[1]
         mutation_to = mif.split('_')[2]
 
-        print('Mutation on: ' + mutated_gene + ' ' + str(location) + ': ' + mutation_from + ' -> ' + mutation_to)
+        # print('Mutation on: ' + mutated_gene + ' ' + str(location) + ': ' + mutation_from + ' -> ' + mutation_to)
         if len(mutation_from) == 1 and len(mutation_to) == 1:
             mutation_type = 'snp'
         else:
@@ -421,7 +421,8 @@ class PostProcessor:
             mutation_name = mutated_gene + '_' + str(location_on_gene) + '_ins' + mutation_from[1:]
 
         else:
-            print(mutation_from + ' -> ' + mutation_to)
+            # print(mutation_from + ' -> ' + mutation_to)
+            pass
 
         return mutation_name
 

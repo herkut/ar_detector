@@ -39,6 +39,7 @@ class Config:
         cls.hyperparameter_grids_directory = raw['hyperparameter_grids_directory']
         cls.deep_learning_metric = raw['deep_learning_metric']
         cls.target_genes_directory = raw['target_genes_directory']
+        cls.mutation_database_directory = raw['mutation_database_directory']
 
         cls.target_drugs = ['Isoniazid', 'Rifampicin', 'Ethambutol', 'Pyrazinamide']
 
