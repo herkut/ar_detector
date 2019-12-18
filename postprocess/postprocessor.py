@@ -37,6 +37,27 @@ class NumpyEncoder(json.JSONEncoder):
 class PostProcessor:
     target_genes = ['ahpC', 'eis', 'embA', 'embB', 'embC', 'embR', 'fabG1', 'gidB', 'gyrA', 'gyrB', 'inhA', 'iniA',
                     'iniC', 'katG', 'manB', 'ndh', 'pncA', 'rmlD', 'rpoB', 'rpsA', 'rpsL', 'rrs', 'tlyA']
+    aminoacid_abbreviations = {'Phe': 'F',
+                               'Leu': 'L',
+                               'Ile': 'I',
+                               'Met': 'M',
+                               'Val': 'V',
+                               'Ser': 'S',
+                               'Pro': 'P',
+                               'Thr': 'T',
+                               'Ala': 'A',
+                               'Tyr': 'Y',
+                               'His': 'H',
+                               'Gln': 'G',
+                               'Asn': 'N',
+                               'Lys': 'K',
+                               'Asp': 'D',
+                               'Glu': 'E',
+                               'Cys': 'C',
+                               'Trp': 'W',
+                               'Arg': 'R',
+                               'Gly': 'G',
+                               'STOP': 'END'}
 
     codon_to_aminoacid = {'ATG': 'START',
                           'TAA': 'END', 'TGA': 'END', 'TAG': 'END',
@@ -80,6 +101,63 @@ class PostProcessor:
     target_genes_start_end_positions = None
     genes = None
     reference_genome = None
+
+    def create_mutation_id_from_dreamtb_record(self, row):
+        # 10th field if - it is in promoter, it > 0 in encoding region
+        mutation_id = None
+        gene = row[4]
+        if gene == 'mabA':
+            gene = 'fabG1'
+        if row[10] is None or row[10] == '?' or row[10] == '' or row[10] == 'See Note':
+            return None
+        elif '-' in row[10] and not row[10].startswith('-'):
+            if row[11].startswith('ins') or row[11].startswith('del'):
+                location = row[10]
+                if location == '':
+                    return None
+                else:
+                    mutation_id = gene + '_' + (location if '-' not in location else location.split('-')[0]) + '_' + row[11].replace(' ', '')
+            else:
+                codon = row[13]
+                if row[14] is not None and row[14] != '':
+                    aa_from = self.aminoacid_abbreviations[row[14].split('/')[0].strip()]
+                    aa_to = self.aminoacid_abbreviations[row[14].split('/')[1].strip()]
+                else:
+                    return None
+                mutation_id = gene + '_' + aa_from + str(codon) + aa_to
+        elif int(row[10]) < 0:
+            if row[11].startswith('ins') or row[11].startswith('del'):
+                if row[11].startswith('ins') or row[11].startswith('del'):
+                    location = row[10]
+                    if location == '':
+                        return None
+                    else:
+                        mutation_id = gene + '_' + location + '_' + row[11].replace(' ', '')
+            else:
+                location = row[10]
+                nucleotide_from = row[11].split('/')[0].strip()
+                nucleotide_to = row[11].split('/')[0].strip()
+                mutation_id = gene + '_' + nucleotide_from + str(location) + nucleotide_to
+        elif int(row[10]) >= 0:
+            if row[11].startswith('ins') or row[11].startswith('del'):
+                if row[11].startswith('ins') or row[11].startswith('del'):
+                    location = row[10]
+                    if location == '':
+                        return None
+                    else:
+                        mutation_id = gene + '_' + (location if '-' not in location else location.split('-')[0]) + '_' + row[11].replace(' ', '')
+            else:
+                codon = row[13]
+                if row[14] is not None and row[14] != '':
+                    aa_from = self.aminoacid_abbreviations[row[14].split('/')[0].strip()]
+                    aa_to = self.aminoacid_abbreviations[row[14].split('/')[1].strip()]
+                else:
+                    return None
+                mutation_id = gene + '_' + aa_from + str(codon) + aa_to
+        else:
+            print(row[10])
+            return None
+        return mutation_id
 
     def create_codons_for_all_genes(self):
         PostProcessor.genes = {}

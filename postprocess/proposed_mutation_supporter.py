@@ -1,6 +1,8 @@
 import csv
 import os
 import pickle
+import sys
+
 import pandas as pd
 
 from config import Config
@@ -26,6 +28,41 @@ def convert_pandas_to_pickle():
             os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', 'labels.pkl'))
         raw_feature_matrix.to_pickle(
             os.path.join(Config.dataset_directory, 'features_dataset_ii_with_normalization', k + '.pkl'))
+
+
+def create_database_according_to_dreamtb(drug):
+    pp = PostProcessor()
+
+    directory = '/run/media/herkut/herkut/TB_genomes/ar_detection_dataset/mutation_database_related'
+    prefix = 'DownloadDB'
+    if drug == 'Isoniazid':
+        file_name = prefix + '_INH.csv'
+    elif drug == 'Rifampicin':
+        file_name = prefix + '_RIF.csv'
+    elif drug == 'Ethambutol':
+        file_name = prefix + '_EMB.csv'
+    elif drug == 'Pyrazinamide':
+        file_name = prefix + '_PZA.csv'
+    else:
+        print('Unknown drug: ' + drug)
+        sys.exit(1)
+
+    with open(os.path.join(directory,
+                           file_name)) as csvfile:
+        readCSV = csv.reader(csvfile, delimiter=',')
+        counter = 0
+        for row in readCSV:
+            if counter > 1:
+                mutation = pp.create_mutation_id_from_dreamtb_record(row)
+                if mutation is None:
+                    with open(os.path.join(directory,
+                                           'manuel_operation_required_mutations_' + drug + '.csv'), 'a') as fd:
+                        fd.write('Line ' + str(counter + 1) + ' none value' + "\n")
+                else:
+                    with open(os.path.join(directory,
+                                           'mutation_database_' + drug + '.csv'), 'a') as fd:
+                        fd.write(mutation + "\n")
+            counter = counter + 1
 
 
 class ProposedMutationSupporter:
@@ -159,7 +196,10 @@ if __name__ == '__main__':
     # models_directory = '/run/media/herkut/hdd-1/TB_genomes/truba/ar_detector_results_dataset-ii_20191205'
 
     # convert_pandas_to_pickle()
+    """
     pms = ProposedMutationSupporter(models_directory,
                                     important_feature_count=50,
                                     enable_most_important_feature_statistics_estimator=False)
-
+    """
+    for drug in Config.target_drugs:
+        create_database_according_to_dreamtb(drug)
