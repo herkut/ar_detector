@@ -24,10 +24,10 @@ class LogisticRegressionFeatureExtractor:
 
     def find_most_important_n_features(self, n):
         most_important_feature_indices_traditional = np.argsort(self.model.coef_)[0, :-(n+1):-1]
-        print(self.model.coef_[0, most_important_feature_indices_traditional])
-        print(self.feature_names[most_important_feature_indices_traditional])
+        # print(self.model.coef_[0, most_important_feature_indices_traditional])
+        # print(self.feature_names[most_important_feature_indices_traditional])
 
-        shap.initjs()
+        # shap.initjs()
         explainer = shap.LinearExplainer(self.model, self.X)
         shap_values = explainer.shap_values(self.X)
 
@@ -35,17 +35,18 @@ class LogisticRegressionFeatureExtractor:
         global_shap_values = np.abs(shap_values).mean(0)
         most_important_feature_indices = np.argsort(global_shap_values)[:-(n+1):-1]
 
-        # shap.force_plot(explainer.expected_value, shap_values[0, :], self.X.iloc[0, :])
-        # shap.force_plot(explainer.expected_value, shap_values[:50, :], self.X.iloc[:50, :])
-
-        #shap.summary_plot(shap_values, self.X, max_display=n, plot_type="dot")
-        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="compact_dot")
-        shap.summary_plot(shap_values, self.X, max_display=n, plot_type="bar")
-        #shap.summary_plot(shap_values, self.X, max_display=n, plot_type="violin")
-
+        """
         return self.feature_names[most_important_feature_indices_traditional], \
                self.model.coef_[0, most_important_feature_indices_traditional], \
                self.X.columns[most_important_feature_indices], \
+               global_shap_values[most_important_feature_indices]
+        """
+        """
+        return self.feature_names[most_important_feature_indices_traditional], \
+               self.model.coef_[0, most_important_feature_indices_traditional],
+        """
+
+        return self.X.columns[most_important_feature_indices], \
                global_shap_values[most_important_feature_indices]
 
 

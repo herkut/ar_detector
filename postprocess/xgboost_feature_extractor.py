@@ -23,11 +23,24 @@ class XGBoostFeatureExtractor:
         self.X = X
 
     def find_most_important_n_features(self, n, save_images=False, drug='tmp_drug'):
+        """
+        traditional_mutations = []
+        traditional_scores = []
+        traditional_mutations_scores = self.model.get_booster().get_score(importance_type='gain')
+        counter = 0
+        for m, s in traditional_mutations_scores.items():
+            if counter < n:
+                traditional_mutations.append(self.feature_names[int(m.replace('f', ''))])
+                traditional_scores.append(s)
+            else:
+                break
+        """
+        # traditional_most_important_feature_indices = np.argsort(self.model.feature_importances_)[:-(n+1):-1]
+
         # xgboost.plot_importance(self.model)
         # plt.title("xgboost.plot_importance(model)")
         # plt.show()
 
-        # shap.initjs()
         explainer = shap.TreeExplainer(self.model)
         shap_values = explainer.shap_values(self.X)
 
@@ -35,15 +48,9 @@ class XGBoostFeatureExtractor:
         global_shap_values = np.abs(shap_values).mean(0)
         most_important_feature_indices = np.argsort(global_shap_values)[:-(n+1):-1]
 
-        # shap.force_plot(explainer.expected_value, shap_values[0, :], self.X.iloc[0, :])
-        # shap.force_plot(explainer.expected_value, shap_values[:50, :], self.X.iloc[:50, :])
-
-        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="dot")
-        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="compact_dot")
-        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="bar")
-        # shap.summary_plot(shap_values, self.X, max_display=n, plot_type="violin")
-
         return self.X.columns[most_important_feature_indices], global_shap_values[most_important_feature_indices]
+        # return traditional_mutations, traditional_scores
+        #return self.X.columns[traditional_most_important_feature_indices], global_shap_values[traditional_most_important_feature_indices]
 
     def choose_features_randomly(self, n):
         # xgboost.plot_importance(self.model)
