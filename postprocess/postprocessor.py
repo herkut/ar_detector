@@ -48,7 +48,7 @@ class PostProcessor:
                                'Ala': 'A',
                                'Tyr': 'Y',
                                'His': 'H',
-                               'Gln': 'G',
+                               'Gln': 'Q',
                                'Asn': 'N',
                                'Lys': 'K',
                                'Asp': 'D',
