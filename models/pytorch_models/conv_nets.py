@@ -408,7 +408,7 @@ class ConvNet1D(torch.nn.Module):
         self.softmax = torch.nn.LogSoftmax(dim=1)
 
     def forward(self, x):
-        x.to(dtype=torch.float, device='cuda:0')
+        x.to('cuda:0', torch.float)
         # conv
         for i in range(len(self.convs)):
             x = self.convs[i](x)

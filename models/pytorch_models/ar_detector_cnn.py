@@ -174,7 +174,7 @@ class ARDetectorCNN(BaseARDetector):
         training_results = None
         for i, data in enumerate(dataloader):
             inputs, labels = data
-            inputs = inputs.to('cuda:' + str(self._devices[-1]))
+            inputs = inputs.to('cuda:' + str(self._devices[-1]), torch.float)
             labels = labels.to('cuda:' + str(self._devices[-1]))
 
             # initialization of gradients
@@ -207,7 +207,7 @@ class ARDetectorCNN(BaseARDetector):
         with torch.no_grad():
             for i, data in enumerate(dataloader):
                 inputs, labels = data
-                inputs = inputs.to('cuda:' + str(self._devices[-1]))
+                inputs = inputs.to('cuda:' + str(self._devices[-1]), torch.float)
                 labels = labels.to('cuda:' + str(self._devices[-1]))
 
                 # Forward propagation
