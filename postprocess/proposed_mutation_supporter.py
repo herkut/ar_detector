@@ -69,7 +69,7 @@ def create_database_according_to_dreamtb(drug):
 class ProposedMutationSupporter:
     def __init__(self,
                  models_directory,
-                 important_feature_count=15,
+                 important_feature_count=30,
                  enable_most_important_feature_statistics_estimator=True,
                  enable_random_feature_statistics_estimator=True,
                  models='xgboost'):
@@ -177,6 +177,7 @@ class ProposedMutationSupporter:
                             counter += 1
                     else:
                         break
+                print('Model: ' + m + ' drug: ' + drug + ' ' + str(tmp_features))
                 dif_mutations[drug][m] = list(set(tmp_features)-set(self.reference_paper_important_features[drug]))
         print(dif_mutations)
 
@@ -333,8 +334,8 @@ class ProposedMutationSupporter:
 
 
 if __name__ == '__main__':
-    # ar_detector_directory = '/run/media/herkut/hdd-1/TB_genomes/ar_detector'
-    ar_detector_directory = '/home/herkut/Desktop/ar_detector'
+    ar_detector_directory = '/run/media/herkut/hdd-1/TB_genomes/ar_detector'
+    # ar_detector_directory = '/home/herkut/Desktop/ar_detector'
     raw = open(os.path.join(ar_detector_directory,
                             'configurations/conf.yml'))
     Config.initialize_configurations(raw)
